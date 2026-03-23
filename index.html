@@ -1080,12 +1080,16 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         </div>
       </div>
 
-      <!-- Modo: Año en curso / Desde contrato -->
+      <!-- Modo: Año en curso / Año contractual / Desde contrato -->
       <div style="display:flex;align-items:center;gap:0;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <div style="display:flex;">
           <button id="rch-btn-anio" onclick="setRentChartMode('anio')"
             style="padding:7px 16px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;border-radius:8px 0 0 8px;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;transition:all 0.15s;">
             📅 Año en curso
+          </button>
+          <button id="rch-btn-aniocontrato" onclick="setRentChartMode('aniocontrato')"
+            style="padding:7px 16px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            📆 Año contractual
           </button>
           <button id="rch-btn-contrato" onclick="setRentChartMode('contrato')"
             style="padding:7px 16px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-radius:0 8px 8px 0;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
@@ -1186,6 +1190,10 @@ textarea.form-control { resize: vertical; min-height: 80px; }
           <button id="cc-toggle-calendario" onclick="setCCMode('calendario')"
             style="padding:7px 16px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;border-radius:8px 0 0 8px;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;transition:all 0.15s;">
             📅 Año en curso
+          </button>
+          <button id="cc-toggle-aniocontrato" onclick="setCCMode('aniocontrato')"
+            style="padding:7px 16px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            📆 Año contractual
           </button>
           <button id="cc-toggle-contrato" onclick="setCCMode('contrato')"
             style="padding:7px 16px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-radius:0 8px 8px 0;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
@@ -2249,7 +2257,7 @@ function seedGrandChelseaContract() {
    Usa versión para forzar recarga si cambió
 ═══════════════════════════════════════════════ */
 function seedInitialPayments() {
-  const SEED_VERSION = 'v13'; // incrementar si hay que re-seedear
+  const SEED_VERSION = 'v14'; // incrementar si hay que re-seedear
   if (getData('seed_payments_version', null) === SEED_VERSION) return;
 
   // Limpiar pagos previos de todas las propiedades antes de re-sembrar
@@ -2315,7 +2323,7 @@ function seedInitialPayments() {
 }
 
 function seedInitialGastos() {
-  const SEED_VERSION = 'v7';
+  const SEED_VERSION = 'v8';
   if (getData('seed_gastos_version', null) === SEED_VERSION) return;
 
   // Limpiar gastos previos de todas las propiedades antes de re-sembrar
@@ -2655,17 +2663,20 @@ var ccMode = 'calendario'; // 'calendario' | 'contrato'
 
 function setCCMode(mode) {
   ccMode = mode;
-  const btnCal = document.getElementById('cc-toggle-calendario');
-  const btnCon = document.getElementById('cc-toggle-contrato');
+  const btnCal  = document.getElementById('cc-toggle-calendario');
+  const btnAnioC= document.getElementById('cc-toggle-aniocontrato');
+  const btnCon  = document.getElementById('cc-toggle-contrato');
   const yearSel = document.getElementById('cc-year');
   if (!btnCal) return;
+  [btnCal, btnAnioC, btnCon].forEach(b => { if(b){ b.style.background='var(--surface)'; b.style.color='var(--text2)'; } });
   if (mode === 'calendario') {
     btnCal.style.background = 'var(--accent)'; btnCal.style.color = '#fff';
-    btnCon.style.background = 'var(--surface)'; btnCon.style.color = 'var(--text2)';
     if (yearSel) yearSel.style.display = '';
+  } else if (mode === 'aniocontrato') {
+    if (btnAnioC) { btnAnioC.style.background = 'var(--accent)'; btnAnioC.style.color = '#fff'; }
+    if (yearSel) yearSel.style.display = 'none';
   } else {
     btnCon.style.background = 'var(--accent)'; btnCon.style.color = '#fff';
-    btnCal.style.background = 'var(--surface)'; btnCal.style.color = 'var(--text2)';
     if (yearSel) yearSel.style.display = 'none';
   }
   renderCentroComputos();
@@ -2736,17 +2747,15 @@ function renderCentroComputos() {
     let ingAnio = 0, gasAnio = 0;
 
     if (ccMode === 'contrato') {
-      // ── Usar año contractual en curso (no acumulado total) ──
+      // ── Usar total acumulado desde inicio de contrato ──
       const ri = calcRentDesdeInicio(id);
-      if (ri) {
-        // Tomar el año contractual en curso (el último)
-        const anioActual = ri.aniosContrato.length > 0 ? ri.aniosContrato[ri.aniosContrato.length - 1] : null;
-        if (anioActual) {
-          ingAnio = anioActual.ingUSD;
-          gasAnio = anioActual.gasUSD;
-        } else {
-          ingAnio = ri.totalIngUSD; gasAnio = ri.totalGasUSD;
-        }
+      if (ri) { ingAnio = ri.totalIngUSD; gasAnio = ri.totalGasUSD; }
+    } else if (ccMode === 'aniocontrato') {
+      // ── Usar solo el año contractual en curso ──
+      const ri = calcRentDesdeInicio(id);
+      if (ri && ri.aniosContrato.length > 0) {
+        const ac = ri.aniosContrato[ri.aniosContrato.length - 1];
+        ingAnio = ac.ingUSD; gasAnio = ac.gasUSD;
       }
     } else {
       // ── Modo calendario: año seleccionado ──
@@ -2803,13 +2812,12 @@ function renderCentroComputos() {
     var netoMes  = mesCur.ingUSD - mesCur.gasUSD;
     var netoAnio = ingAnio - gasAnio;
 
-    // En modo contrato: meses cobrados del año contractual en curso
-    // En modo calendario: meses transcurridos del año
+    // mesesBase: para anualizar la rentabilidad
     var mesesBase;
-    if (ccMode === 'contrato') {
+    if (ccMode === 'contrato' || ccMode === 'aniocontrato') {
       const ri2 = calcRentDesdeInicio(id);
-      const anioActual2 = ri2 && ri2.aniosContrato.length > 0 ? ri2.aniosContrato[ri2.aniosContrato.length - 1] : null;
-      mesesBase = anioActual2 ? Math.max(1, anioActual2.mesesCobrados) : (curMonth + 1);
+      const ac2 = ri2 && ri2.aniosContrato.length > 0 ? ri2.aniosContrato[ri2.aniosContrato.length - 1] : null;
+      mesesBase = ac2 ? Math.max(1, ac2.mesesCobrados) : (curMonth + 1);
     } else {
       mesesBase = curMonth + 1;
     }
@@ -2837,16 +2845,17 @@ function renderCentroComputos() {
   // Rent bruta mensual portfolio = (ingreso mes / valor total) * 100
   var portRentBrutaMes  = portValorTotal > 0 && portIngMes  > 0 ? (portIngMes  / portValorTotal * 100 * 12) : null;
   var portRentNetaMes   = portValorTotal > 0 && (portIngMes > 0 || portGasMes > 0) ? (portNetoMes / portValorTotal * 100 * 12) : null;
-  // Para el modo contrato: usar promedio de mesesBase de cada propiedad
+  // Para los modos contrato/aniocontrato: usar promedio de mesesCobrados del año en curso
   var portMesesBaseTotal = 0, portMesesBaseCount = 0;
-  if (ccMode === 'contrato') {
+  if (ccMode === 'contrato' || ccMode === 'aniocontrato') {
     allEntries.forEach(function(entry) {
       const ri3 = calcRentDesdeInicio(entry[0]);
       const ac3 = ri3 && ri3.aniosContrato.length > 0 ? ri3.aniosContrato[ri3.aniosContrato.length - 1] : null;
       if (ac3) { portMesesBaseTotal += Math.max(1, ac3.mesesCobrados); portMesesBaseCount++; }
     });
   }
-  var portMesesBase = ccMode === 'contrato' && portMesesBaseCount > 0 ? portMesesBaseTotal / portMesesBaseCount : (curMonth + 1);
+  var portMesesBase = (ccMode === 'contrato' || ccMode === 'aniocontrato') && portMesesBaseCount > 0
+    ? portMesesBaseTotal / portMesesBaseCount : (curMonth + 1);
   var portRentBrutaAnio = portValorTotal > 0 && portIngAnio > 0 ? (portIngAnio / portMesesBase * 12 / portValorTotal * 100) : null;
   var portRentNetaAnio  = portValorTotal > 0 && (portIngAnio > 0 || portGasAnio > 0) ? (portNetoAnio / portMesesBase * 12 / portValorTotal * 100) : null;
 
@@ -2902,8 +2911,8 @@ function renderCentroComputos() {
 
   const mesNom = MESES[curMonth];
   // Label dinámico según modo
-  const periodoLabel = ccMode === 'contrato' ? 'desde contrato' : String(year);
-  const periodoLabelCap = ccMode === 'contrato' ? 'Desde contrato' : String(year);
+  const periodoLabel    = ccMode === 'contrato' ? 'desde contrato' : ccMode === 'aniocontrato' ? 'año contractual' : String(year);
+  const periodoLabelCap = ccMode === 'contrato' ? 'Desde contrato' : ccMode === 'aniocontrato' ? 'Año contractual' : String(year);
 
   // Check which properties are missing TC (can't convert)
   var sinTC = propData.filter(function(d) {
@@ -4617,11 +4626,14 @@ function _rcToUSD(val, moneda, tc) {
 
 function setRentChartMode(mode) {
   _rentChartMode = mode;
-  const btnA = document.getElementById('rch-btn-anio');
-  const btnC = document.getElementById('rch-btn-contrato');
+  const btnA  = document.getElementById('rch-btn-anio');
+  const btnAC = document.getElementById('rch-btn-aniocontrato');
+  const btnC  = document.getElementById('rch-btn-contrato');
   const yrSel = document.getElementById('rent-chart-year');
-  if (btnA) { btnA.style.background = mode==='anio' ? 'var(--accent)' : 'var(--surface)'; btnA.style.color = mode==='anio' ? '#fff' : 'var(--text2)'; }
-  if (btnC) { btnC.style.background = mode==='contrato' ? 'var(--accent)' : 'var(--surface)'; btnC.style.color = mode==='contrato' ? '#fff' : 'var(--text2)'; }
+  [btnA, btnAC, btnC].forEach(b => { if(b){ b.style.background='var(--surface)'; b.style.color='var(--text2)'; } });
+  if (mode === 'anio' && btnA)  { btnA.style.background='var(--accent)';  btnA.style.color='#fff'; }
+  if (mode === 'aniocontrato' && btnAC) { btnAC.style.background='var(--accent)'; btnAC.style.color='#fff'; }
+  if (mode === 'contrato' && btnC) { btnC.style.background='var(--accent)'; btnC.style.color='#fff'; }
   if (yrSel) yrSel.style.display = mode === 'anio' ? '' : 'none';
   renderRentChart();
 }
@@ -4744,6 +4756,87 @@ function renderRentChart() {
     }
 
     _buildAndRenderChart(canvas, labels, propIds, tipo, calcAnio, calcTotalAnio, `Año ${year}`);
+
+  // ── MODO: AÑO CONTRACTUAL EN CURSO ──────────────────
+  } else if (_rentChartMode === 'aniocontrato') {
+    // Eje X: los meses del año contractual en curso (hasta 12) de la prop con contrato más antiguo
+    // Usamos los meses del año contractual activo de cada propiedad
+    // Timeline: etiquetas de mes 1 a 12 del año contractual
+    const labels = ['M1','M2','M3','M4','M5','M6','M7','M8','M9','M10','M11','M12'];
+
+    function calcAnioContrato(propId) {
+      const p     = props[propId] || {};
+      const valor = VALORES_PROPIEDAD_USD[propId] || 0;
+      const moneda = p.moneda || 'ARS';
+      const ri    = calcRentDesdeInicio(propId);
+      const realArr = Array(12).fill(null);
+      const estArr  = Array(12).fill(null);
+      if (!ri || ri.aniosContrato.length === 0) return { realArr, estArr };
+
+      const ac = ri.aniosContrato[ri.aniosContrato.length - 1]; // año en curso
+
+      // Estimada: monto contrato con TC fijo del año contractual (línea plana)
+      const montoC = parseNum(p.monto);
+      const tcFijoAC = ac.rows.map(r => _rcGetTC(propId, r.yr, r.mi)).filter(t => t > 0);
+      const tcFijo   = tcFijoAC.length > 0 ? tcFijoAC.reduce((a,b)=>a+b,0)/tcFijoAC.length : 0;
+      const estUSD   = montoC > 0 && moneda !== 'USD' && tcFijo > 0 ? montoC / tcFijo
+                     : montoC > 0 && moneda === 'USD' ? montoC : 0;
+      const estPct   = valor > 0 && estUSD > 0 ? estUSD / valor * 100 * 12 : null;
+
+      ac.rows.forEach((r, idx) => {
+        if (idx >= 12) return;
+        estArr[idx] = estPct; // constante
+        const tc = _rcGetTC(propId, r.yr, r.mi);
+        let ingUSD = 0, gasUSD = 0;
+        if (r.estado === 'pagado') ingUSD = _rcToUSD(parseNum(r.monto || 0), r.mpago || moneda, tc);
+        // Use pre-calculated values from the contract year
+        ingUSD = r.ingUSD || 0;
+        gasUSD = tipo === 'neta' ? (r.gasUSD || 0) : 0;
+        const realPct = valor > 0 && r.estado === 'pagado' ? ((ingUSD - gasUSD) / valor * 100 * 12) : null;
+        realArr[idx] = realPct;
+      });
+      return { realArr, estArr };
+    }
+
+    function calcTotalAnioContrato() {
+      const totalValor = propIds.reduce((s,id) => s + (VALORES_PROPIEDAD_USD[id]||0), 0);
+      const realArr = Array(12).fill(null), estArr = Array(12).fill(null);
+
+      // TC fijo estimada: promedio por propiedad
+      let tEstTotal = 0;
+      propIds.forEach(pid => {
+        const p = props[pid]||{}; const moneda = p.moneda||'ARS';
+        const ri = calcRentDesdeInicio(pid);
+        const ac = ri && ri.aniosContrato.length > 0 ? ri.aniosContrato[ri.aniosContrato.length-1] : null;
+        if (!ac) return;
+        const montoC = parseNum(p.monto);
+        const tcFs = ac.rows.map(r=>_rcGetTC(pid,r.yr,r.mi)).filter(t=>t>0);
+        const tcF  = tcFs.length>0 ? tcFs.reduce((a,b)=>a+b,0)/tcFs.length : 0;
+        tEstTotal += moneda==='USD' ? montoC : (tcF>0 ? montoC/tcF : 0);
+      });
+      const estPctTotal = totalValor > 0 && tEstTotal > 0 ? tEstTotal / totalValor * 100 * 12 : null;
+      estArr.fill(estPctTotal);
+
+      // Real: por posición en el año contractual
+      for (let idx = 0; idx < 12; idx++) {
+        let tReal = 0, hasReal = false;
+        propIds.forEach(pid => {
+          const ri = calcRentDesdeInicio(pid);
+          const ac = ri && ri.aniosContrato.length > 0 ? ri.aniosContrato[ri.aniosContrato.length-1] : null;
+          if (!ac || idx >= ac.rows.length) return;
+          const r = ac.rows[idx];
+          if (r.estado === 'pagado') {
+            hasReal = true;
+            tReal += r.ingUSD || 0;
+            if (tipo === 'neta') tReal -= (r.gasUSD || 0);
+          }
+        });
+        realArr[idx] = totalValor > 0 && hasReal ? tReal / totalValor * 100 * 12 : null;
+      }
+      return { realArr, estArr };
+    }
+
+    _buildAndRenderChart(canvas, labels, propIds, tipo, calcAnioContrato, calcTotalAnioContrato, 'Año contractual en curso');
 
   // ── MODO: DESDE INICIO DE CONTRATO ──────────────────
   } else {
