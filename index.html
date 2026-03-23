@@ -2009,6 +2009,43 @@ function initProperties() {
   seedInitialPayments();
   // Sembrar gastos históricos pre-cargados
   seedInitialGastos();
+
+  // ── MIGRACIÓN PUNTUAL: garantizar pagos 2026 correctos ──
+  // Corre siempre; solo pisa meses que figuren como pendiente/vencido cuando deberían ser pagado
+  (function fixPagos2026() {
+    const TC_ARS = { 2026: [1450,1405,1390] };
+    const TC_PYG = { 2026: [6500,6450,6520] };
+
+    function forcePayIfMissing(propId, year, monthIdx, monto, moneda, tc) {
+      const key  = 'pay_' + propId + '_' + year;
+      const pays = getData(key, {});
+      const m    = pays[monthIdx] || {};
+      if (m.estado === 'pagado') return; // ya está bien, no tocar
+      pays[monthIdx] = { estado:'pagado', monto:String(monto), monedaPago:moneda, tc: tc ? String(tc) : '', fecha:'', obs:'' };
+      setData(key, pays);
+    }
+
+    // Yrigoyen ene-feb-mar 2026
+    forcePayIfMissing('irigoyen', 2026, 0, 1071000, 'ARS', TC_ARS[2026][0]);
+    forcePayIfMissing('irigoyen', 2026, 1, 1071000, 'ARS', TC_ARS[2026][1]);
+    forcePayIfMissing('irigoyen', 2026, 2, 1167000, 'ARS', TC_ARS[2026][2]);
+    // Holmberg ene-feb-mar 2026
+    forcePayIfMissing('holmer',   2026, 0, 300, 'USD', null);
+    forcePayIfMissing('holmer',   2026, 1, 300, 'USD', null);
+    forcePayIfMissing('holmer',   2026, 2, 300, 'USD', null);
+    // PH Melo ene-feb-mar 2026
+    forcePayIfMissing('phmelo',   2026, 0, 400, 'USD', null);
+    forcePayIfMissing('phmelo',   2026, 1, 400, 'USD', null);
+    forcePayIfMissing('phmelo',   2026, 2, 400, 'USD', null);
+    // Grand Chelsea dic 2025 + ene-feb-mar 2026
+    forcePayIfMissing('grandchelsea', 2025, 11, 3900000, 'PYG', 6500);
+    forcePayIfMissing('grandchelsea', 2026,  0, 3900000, 'PYG', TC_PYG[2026][0]);
+    forcePayIfMissing('grandchelsea', 2026,  1, 3900000, 'PYG', TC_PYG[2026][1]);
+    forcePayIfMissing('grandchelsea', 2026,  2, 3900000, 'PYG', TC_PYG[2026][2]);
+    // Love Molas feb-mar 2026
+    forcePayIfMissing('lovemolas', 2026, 1, 3650000, 'PYG', TC_PYG[2026][1]);
+    forcePayIfMissing('lovemolas', 2026, 2, 3650000, 'PYG', TC_PYG[2026][2]);
+  })();
 }
 
 function seedChelseaPlaza() {
@@ -2166,7 +2203,7 @@ function seedGrandChelseaContract() {
    Usa versión para forzar recarga si cambió
 ═══════════════════════════════════════════════ */
 function seedInitialPayments() {
-  const SEED_VERSION = 'v11'; // incrementar si hay que re-seedear
+  const SEED_VERSION = 'v12'; // incrementar si hay que re-seedear
   if (getData('seed_payments_version', null) === SEED_VERSION) return;
 
   // Limpiar pagos previos de todas las propiedades antes de re-sembrar
@@ -2232,7 +2269,7 @@ function seedInitialPayments() {
 }
 
 function seedInitialGastos() {
-  const SEED_VERSION = 'v4';
+  const SEED_VERSION = 'v5';
   if (getData('seed_gastos_version', null) === SEED_VERSION) return;
 
   // Limpiar gastos previos de todas las propiedades antes de re-sembrar
