@@ -2654,11 +2654,24 @@ function renderCentroComputos() {
     if (tcProm > 0) return Math.round(monto / tcProm);
     return 0;
   }
-  function getPropTCProm(pays) {
+  const _CC_TC_ARS = {
+    2024:[1200,1150,1000,1040,1200,1300,1350,1300,1250,1200,1150,1100],
+    2025:[1150,1200,1250,1300,1320,1350,1380,1420,1480,1520,1550,1500],
+    2026:[1450,1405,1390,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+  };
+  const _CC_TC_PYG = {
+    2024:[7300,7350,7400,7450,7500,7550,7600,7650,7700,7750,7800,7900],
+    2025:[7300,7250,7200,7150,7100,7050,7000,7050,7100,6950,6800,6500],
+    2026:[6500,6450,6520,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+  };
+
+  function getPropTCProm(pays, esParaguay, yr) {
     let s = 0, c = 0;
+    const tbl = (esParaguay ? _CC_TC_PYG : _CC_TC_ARS)[yr || year] || [];
     for (let mi = 0; mi < 12; mi++) {
       const t = parseNum((pays[mi] || {}).tc);
       if (t > 0) { s += t; c++; }
+      else if (tbl[mi] > 0) { s += tbl[mi]; c++; }
     }
     return c > 0 ? s / c : 0;
   }
@@ -2672,7 +2685,7 @@ function renderCentroComputos() {
     const gastos = getGastos(id, year);
     const esParaguay = (p.pais || '').toLowerCase().includes('paraguay');
     const monedaLocal = esParaguay ? 'PYG' : (p.moneda || 'ARS');
-    const tcProm = getPropTCProm(pays);
+    const tcProm = getPropTCProm(pays, esParaguay);
 
     let ingAnio = 0, gasAnio = 0;
 
@@ -2735,10 +2748,10 @@ function renderCentroComputos() {
       ingAnio: ingAnio, gasAnio: gasAnio, netoAnio: netoAnio,
       ingMes: mesCur.ingUSD, gasMes: mesCur.gasUSD, netoMes: netoMes,
       estadoMes: mesCur.estado, mesesArr: mesesArr,
-      rentBrutaMes:  valorProp > 0 && mesCur.ingUSD > 0 ? (mesCur.ingUSD / valorProp * 100) : null,
-      rentNetaMes:   valorProp > 0 && (mesCur.ingUSD > 0 || mesCur.gasUSD > 0) ? (netoMes / valorProp * 100) : null,
-      rentBrutaAnio: valorProp > 0 && ingAnio > 0 ? (ingAnio / valorProp * 100) : null,
-      rentNetaAnio:  valorProp > 0 && (ingAnio > 0 || gasAnio > 0) ? (netoAnio / valorProp * 100) : null
+      rentBrutaMes:  valorProp > 0 && mesCur.ingUSD > 0 ? (mesCur.ingUSD / valorProp * 100 * 12) : null,
+      rentNetaMes:   valorProp > 0 && (mesCur.ingUSD > 0 || mesCur.gasUSD > 0) ? (netoMes / valorProp * 100 * 12) : null,
+      rentBrutaAnio: valorProp > 0 && ingAnio > 0 ? (ingAnio / (curMonth + 1) * 12 / valorProp * 100) : null,
+      rentNetaAnio:  valorProp > 0 && (ingAnio > 0 || gasAnio > 0) ? (netoAnio / (curMonth + 1) * 12 / valorProp * 100) : null
     };
   });
 
@@ -2751,10 +2764,10 @@ function renderCentroComputos() {
     portValorTotal += VALORES_PROPIEDAD_USD[entry[0]] || 0;
   });
   // Rent bruta mensual portfolio = (ingreso mes / valor total) * 100
-  var portRentBrutaMes  = portValorTotal > 0 && portIngMes  > 0 ? (portIngMes  / portValorTotal * 100) : null;
-  var portRentNetaMes   = portValorTotal > 0 && (portIngMes > 0 || portGasMes > 0) ? ((portNetoMes) / portValorTotal * 100)  : null;
-  var portRentBrutaAnio = portValorTotal > 0 && portIngAnio > 0 ? (portIngAnio / portValorTotal * 100) : null;
-  var portRentNetaAnio  = portValorTotal > 0 && (portIngAnio > 0 || portGasAnio > 0) ? ((portNetoAnio) / portValorTotal * 100) : null;
+  var portRentBrutaMes  = portValorTotal > 0 && portIngMes  > 0 ? (portIngMes  / portValorTotal * 100 * 12) : null;
+  var portRentNetaMes   = portValorTotal > 0 && (portIngMes > 0 || portGasMes > 0) ? (portNetoMes / portValorTotal * 100 * 12) : null;
+  var portRentBrutaAnio = portValorTotal > 0 && portIngAnio > 0 ? (portIngAnio / (curMonth + 1) * 12 / portValorTotal * 100) : null;
+  var portRentNetaAnio  = portValorTotal > 0 && (portIngAnio > 0 || portGasAnio > 0) ? (portNetoAnio / (curMonth + 1) * 12 / portValorTotal * 100) : null;
 
   // ─── Tabla mensual del portfolio ───
   let tablaFilasHTML = '';
@@ -2765,7 +2778,7 @@ function renderCentroComputos() {
       const pays = getPayments(id, year);
       const esP = (p.pais || '').toLowerCase().includes('paraguay');
       const mLocal = esP ? 'PYG' : (p.moneda || 'ARS');
-      const tcP = getPropTCProm(pays);
+      const tcP = getPropTCProm(pays, esP);
       const m = pays[i] || {};
       const monto = parseNum(m.monto);
       const tc    = parseNum(m.tc);
@@ -2815,7 +2828,8 @@ function renderCentroComputos() {
     var moneda = d.p.moneda || 'ARS';
     if (moneda === 'USD') return false;
     var pays = getPayments(d.id, year);
-    var tcP = getPropTCProm(pays);
+    var esP = (d.p.pais||'').toLowerCase().includes('paraguay');
+    var tcP = getPropTCProm(pays, esP);
     return tcP <= 0 && d.ingAnio === 0 && d.p.estado === 'Alquilado';
   });
 
@@ -3109,8 +3123,8 @@ function renderCentroComputos() {
     portTotalIngInicio += ri.totalIngUSD;
     portTotalGasInicio += ri.totalGasUSD;
 
-    var rentB  = valProp > 0 && ri.totalIngUSD > 0 ? (ri.totalIngUSD / valProp * 100).toFixed(1) + '%' : '—';
-    var rentN  = valProp > 0 && ri.totalIngUSD > 0 ? (ri.netoUSD / valProp * 100).toFixed(1) + '%' : '—';
+    var rentB  = valProp > 0 && ri.totalIngUSD > 0 && ri.mesesContrato > 0 ? (ri.totalIngUSD / ri.mesesContrato * 12 / valProp * 100).toFixed(1) + '%' : '—';
+    var rentN  = valProp > 0 && ri.totalIngUSD > 0 && ri.mesesContrato > 0 ? (ri.netoUSD    / ri.mesesContrato * 12 / valProp * 100).toFixed(1) + '%' : '—';
     var rentNC = ri.netoUSD >= 0 ? '#2e7d52' : '#c0392b';
     var flag   = pp.pais === 'Argentina' ? '🇦🇷' : '🇵🇾';
     var netoC  = ri.netoUSD >= 0 ? '#1a3a6b' : '#c0392b';
@@ -3221,7 +3235,7 @@ function renderCentroComputos() {
       var pays = getPayments(pid, year);
       var esP = (pp.pais||'').toLowerCase().includes('paraguay');
       var mLocal = esP ? 'PYG' : (pp.moneda || 'ARS');
-      var tcP = getPropTCProm(pays);
+      var tcP = getPropTCProm(pays, esP);
       for (var mi = 0; mi < 12; mi++) {
         var m = pays[mi] || {};
         var monto = parseNum(m.monto);
@@ -3239,20 +3253,21 @@ function renderCentroComputos() {
       paisValorTotal += VALORES_PROPIEDAD_USD[pid] || 0;
     });
     var paisNetoAnio = paisIngAnio - paisGasAnio;
-    var paisRBAnio   = paisValorTotal > 0 && paisIngAnio > 0 ? (paisIngAnio / paisValorTotal * 100).toFixed(1) + '%' : '—';
-    var paisRNAnio   = paisValorTotal > 0 && paisIngAnio > 0 ? (paisNetoAnio / paisValorTotal * 100).toFixed(1) + '%' : '—';
+    var paisRBAnio   = paisValorTotal > 0 && paisIngAnio > 0 ? (paisIngAnio / (curMonth + 1) * 12 / paisValorTotal * 100).toFixed(1) + '%' : '—';
+    var paisRNAnio   = paisValorTotal > 0 && paisIngAnio > 0 ? (paisNetoAnio / (curMonth + 1) * 12 / paisValorTotal * 100).toFixed(1) + '%' : '—';
     var paisRNAnioC  = paisNetoAnio >= 0 ? '#2e7d52' : '#c0392b';
 
     // ── Acumulados desde inicio de contrato ──
-    var paisIngInicio = 0, paisGasInicio = 0;
+    var paisIngInicio = 0, paisGasInicio = 0, paisMesesInicio = 0;
     entries.forEach(function(entry) {
       var pid = entry[0];
       var ri = calcRentDesdeInicio(pid);
-      if (ri) { paisIngInicio += ri.totalIngUSD; paisGasInicio += ri.totalGasUSD; }
+      if (ri) { paisIngInicio += ri.totalIngUSD; paisGasInicio += ri.totalGasUSD; paisMesesInicio += ri.mesesContrato; }
     });
     var paisNetoInicio = paisIngInicio - paisGasInicio;
-    var paisRBInicio   = paisValorTotal > 0 && paisIngInicio > 0 ? (paisIngInicio / paisValorTotal * 100).toFixed(1) + '%' : '—';
-    var paisRNInicio   = paisValorTotal > 0 && paisIngInicio > 0 ? (paisNetoInicio / paisValorTotal * 100).toFixed(1) + '%' : '—';
+    var paisMesesPromInicio = entries.length > 0 ? paisMesesInicio / entries.length : 1;
+    var paisRBInicio   = paisValorTotal > 0 && paisIngInicio > 0 && paisMesesPromInicio > 0 ? (paisIngInicio / paisMesesPromInicio * 12 / paisValorTotal * 100).toFixed(1) + '%' : '—';
+    var paisRNInicio   = paisValorTotal > 0 && paisIngInicio > 0 && paisMesesPromInicio > 0 ? (paisNetoInicio / paisMesesPromInicio * 12 / paisValorTotal * 100).toFixed(1) + '%' : '—';
     var paisRNInicioC  = paisNetoInicio >= 0 ? '#2e7d52' : '#c0392b';
 
     // ── Rentabilidad anual proyectada ──
@@ -3264,7 +3279,7 @@ function renderCentroComputos() {
       var esP = (pp.pais||'').toLowerCase().includes('paraguay');
       var mLocal = esP ? 'PYG' : (pp.moneda || 'ARS');
       var pays = getPayments(pid, year);
-      var tcP = getPropTCProm(pays);
+      var tcP = getPropTCProm(pays, esP);
       var mesUSD = pp.moneda === 'USD' ? montoMes : (tcP > 0 ? montoMes / tcP : 0);
       paisIngProy += mesUSD * 12;
     });
@@ -3276,7 +3291,7 @@ function renderCentroComputos() {
       var pays = getPayments(pid, year);
       var esP = (pp.pais||'').toLowerCase().includes('paraguay');
       var mLocal = esP ? 'PYG' : (pp.moneda || 'ARS');
-      var tcP = getPropTCProm(pays);
+      var tcP = getPropTCProm(pays, esP);
       var valProp = VALORES_PROPIEDAD_USD[pid] || 0;
 
       // Año
@@ -3291,18 +3306,20 @@ function renderCentroComputos() {
         });
       }
       var netA = ingA - gasA;
-      var rbA  = valProp > 0 && ingA > 0 ? (ingA/valProp*100).toFixed(1)+'%' : '—';
-      var rnA  = valProp > 0 && ingA > 0 ? (netA/valProp*100).toFixed(1)+'%' : '—';
+      var mesesPagadosA = 0;
+      for (var mi3 = 0; mi3 < 12; mi3++) { if ((pays[mi3]||{}).estado === 'pagado') mesesPagadosA++; }
+      var rbA  = valProp > 0 && ingA > 0 && mesesPagadosA > 0 ? (ingA/mesesPagadosA*12/valProp*100).toFixed(1)+'%' : '—';
+      var rnA  = valProp > 0 && ingA > 0 && mesesPagadosA > 0 ? (netA/mesesPagadosA*12/valProp*100).toFixed(1)+'%' : '—';
       var rnAC = netA >= 0 ? '#2e7d52' : '#c0392b';
 
       // Desde inicio
       var ri = calcRentDesdeInicio(pid);
       var ingI = ri ? ri.totalIngUSD : 0; var gasI = ri ? ri.totalGasUSD : 0;
       var netI = ingI - gasI;
-      var rbI  = valProp > 0 && ingI > 0 ? (ingI/valProp*100).toFixed(1)+'%' : '—';
-      var rnI  = valProp > 0 && ingI > 0 ? (netI/valProp*100).toFixed(1)+'%' : '—';
-      var rnIC = netI >= 0 ? '#2e7d52' : '#c0392b';
       var mesesI = ri ? ri.mesesContrato : 0;
+      var rbI  = valProp > 0 && ingI > 0 && mesesI > 0 ? (ingI/mesesI*12/valProp*100).toFixed(1)+'%' : '—';
+      var rnI  = valProp > 0 && ingI > 0 && mesesI > 0 ? (netI/mesesI*12/valProp*100).toFixed(1)+'%' : '—';
+      var rnIC = netI >= 0 ? '#2e7d52' : '#c0392b';
 
       // Proyectada
       var montoMes = parseNum(pp.monto);
@@ -4852,11 +4869,26 @@ function renderAllPropsTable() {
         : '<span class="badge badge-yellow">⏳ Pendiente</span>';
     const estadoBadge = getEstadoBadge(p.estado);
 
-    // TC promedio anual (de todos los meses con TC cargado)
+    // TC promedio anual (de todos los meses con TC cargado, con fallback a tablas de referencia)
+    const _TC_ARS_REF = {
+      2024:[1200,1150,1000,1040,1200,1300,1350,1300,1250,1200,1150,1100],
+      2025:[1150,1200,1250,1300,1320,1350,1380,1420,1480,1520,1550,1500],
+      2026:[1450,1405,1390,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+    };
+    const _TC_PYG_REF = {
+      2024:[7300,7350,7400,7450,7500,7550,7600,7650,7700,7750,7800,7900],
+      2025:[7300,7250,7200,7150,7100,7050,7000,7050,7100,6950,6800,6500],
+      2026:[6500,6450,6520,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+    };
+    const _esParaguayProp = (p.pais||'').toLowerCase().includes('paraguay');
     let tcSumAnio = 0, tcCountAnio = 0;
     for (let mi = 0; mi < 12; mi++) {
       const tc2 = parseNum((pays[mi] || {}).tc);
       if (tc2 > 0) { tcSumAnio += tc2; tcCountAnio++; }
+      else {
+        const tcRef2 = ((_esParaguayProp ? _TC_PYG_REF : _TC_ARS_REF)[year] || [])[mi] || 0;
+        if (tcRef2 > 0) { tcSumAnio += tcRef2; tcCountAnio++; }
+      }
     }
     const tcPromAnio = tcCountAnio > 0 ? tcSumAnio / tcCountAnio : 0;
 
@@ -5762,16 +5794,15 @@ function addDocument() {
    HELPER: Rentabilidad desde inicio de contrato
 ═══════════════════════════════════════════════ */
 function calcRentDesdeInicio(propId) {
-  // Devuelve { rows, totalIngUSD, totalGasUSD, mesesContrato, primerAnio, primerMes, hoy }
   const p = getPropData(propId);
   if (!p.inicio) return null;
 
   const inicioDate = new Date(p.inicio + 'T00:00:00');
-  const hoy = new Date();
+  const hoy        = new Date();
   const esParaguay = (p.pais || '').toLowerCase().includes('paraguay');
   const monedaLocal = esParaguay ? 'PYG' : (p.moneda || 'ARS');
+  const valorProp  = VALORES_PROPIEDAD_USD[propId] || 0;
 
-  // Tablas TC de referencia (fallback cuando el pago no tiene TC, ej: Holmberg paga en USD)
   const TC_ARS_REF = {
     2024:[1200,1150,1000,1040,1200,1300,1350,1300,1250,1200,1150,1100],
     2025:[1150,1200,1250,1300,1320,1350,1380,1420,1480,1520,1550,1500],
@@ -5786,72 +5817,116 @@ function calcRentDesdeInicio(propId) {
     return ((esParaguay ? TC_PYG_REF : TC_ARS_REF)[yr] || [])[mi] || 0;
   }
 
-  // Rango de años a recorrer
-  const primerAnio = inicioDate.getFullYear();
-  const anioHoy    = hoy.getFullYear();
+  // ── Generar lista de todos los meses desde inicio hasta hoy ──
+  const allMeses = []; // { yr, mi, date }
+  let cur = new Date(inicioDate.getFullYear(), inicioDate.getMonth(), 1);
+  const endDate = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  while (cur <= endDate) {
+    allMeses.push({ yr: cur.getFullYear(), mi: cur.getMonth() });
+    cur.setMonth(cur.getMonth() + 1);
+  }
 
+  // ── Calcular ingreso/gasto por mes ──
+  const rows = [];
   let totalIngUSD = 0, totalGasUSD = 0;
-  const rows = []; // { label, ingUSD, gasUSD, estado }
 
-  for (let yr = primerAnio; yr <= anioHoy; yr++) {
-    const pays = getPayments(propId, yr);
-    // TC promedio del año (de pagos que sí tienen TC)
-    let tcS = 0, tcC = 0;
-    for (let mi = 0; mi < 12; mi++) {
-      const t = parseNum((pays[mi] || {}).tc);
-      if (t > 0) { tcS += t; tcC++; }
-    }
-    const tcProm = tcC > 0 ? tcS / tcC : 0;
-
-    for (let mi = 0; mi < 12; mi++) {
-      // Filtrar meses antes del inicio o después de hoy
-      const mesDate = new Date(yr, mi, 1);
-      if (mesDate < new Date(inicioDate.getFullYear(), inicioDate.getMonth(), 1)) continue;
-      if (mesDate > new Date(hoy.getFullYear(), hoy.getMonth(), 1)) continue;
-
-      const m = pays[mi] || {};
-      const monto    = parseNum(m.monto);
-      const tc       = parseNum(m.tc);
-      const mpago    = m.monedaPago || monedaLocal;
-      const estado   = m.estado || 'pendiente';
-
-      // TC efectivo: del pago → promedio anual → tabla de referencia
-      const tcEfectivo = tc > 0 ? tc : (tcProm > 0 ? tcProm : getRefTC(yr, mi));
-
-      let ingUSD = 0;
-      if (monto > 0 && estado === 'pagado') {
-        if (mpago === 'USD') ingUSD = monto;
-        else if (tcEfectivo > 0) ingUSD = Math.round(monto / tcEfectivo);
+  // Cache de pagos por año
+  const paysCache = {};
+  const tcPromCache = {};
+  allMeses.forEach(({ yr }) => {
+    if (!paysCache[yr]) {
+      paysCache[yr] = getPayments(propId, yr);
+      let tcS = 0, tcC = 0;
+      for (let mi = 0; mi < 12; mi++) {
+        const t = parseNum((paysCache[yr][mi] || {}).tc);
+        if (t > 0) { tcS += t; tcC++; }
       }
-
-      const gastosMes = getGastosMes(propId, yr, mi);
-      let gasUSD = 0;
-      gastosMes.forEach(g => {
-        const v = parseNum(g.monto);
-        const cur = g.moneda || monedaLocal;
-        if (cur === 'USD')           gasUSD += v;
-        else if (tcEfectivo > 0)     gasUSD += Math.round(v / tcEfectivo);
-      });
-
-      totalIngUSD += ingUSD;
-      totalGasUSD += gasUSD;
-
-      rows.push({
-        label: MESES[mi] + ' ' + yr,
-        ingUSD, gasUSD, estado,
-        monto, monedaLocal, tc, tcProm, mpago
-      });
+      tcPromCache[yr] = tcC > 0 ? tcS / tcC : 0;
     }
+  });
+
+  allMeses.forEach(({ yr, mi }) => {
+    const pays    = paysCache[yr];
+    const tcProm  = tcPromCache[yr];
+    const m       = pays[mi] || {};
+    const monto   = parseNum(m.monto);
+    const tc      = parseNum(m.tc);
+    const mpago   = m.monedaPago || monedaLocal;
+    const estado  = m.estado || 'pendiente';
+    const tcEfectivo = tc > 0 ? tc : (tcProm > 0 ? tcProm : getRefTC(yr, mi));
+
+    let ingUSD = 0;
+    if (monto > 0 && estado === 'pagado') {
+      if (mpago === 'USD') ingUSD = monto;
+      else if (tcEfectivo > 0) ingUSD = Math.round(monto / tcEfectivo);
+    }
+
+    let gasUSD = 0;
+    getGastosMes(propId, yr, mi).forEach(g => {
+      const v = parseNum(g.monto);
+      const cur2 = g.moneda || monedaLocal;
+      if (cur2 === 'USD') gasUSD += v;
+      else if (tcEfectivo > 0) gasUSD += Math.round(v / tcEfectivo);
+    });
+
+    totalIngUSD += ingUSD;
+    totalGasUSD += gasUSD;
+    rows.push({ label: MESES[mi] + ' ' + yr, yr, mi, ingUSD, gasUSD, estado, monto, monedaLocal, tc, tcProm, mpago });
+  });
+
+  // ── Segmentar en años contractuales (año 1 = meses 1-12, año 2 = 13-24, ...) ──
+  const aniosContrato = [];
+  const MESES_POR_ANIO = 12;
+  let anioNum = 1;
+  let idx = 0;
+  while (idx < rows.length) {
+    const chunk = rows.slice(idx, idx + MESES_POR_ANIO);
+    const ingAnio  = chunk.reduce((s, r) => s + r.ingUSD, 0);
+    const gasAnio  = chunk.reduce((s, r) => s + r.gasUSD, 0);
+    const netoAnio = ingAnio - gasAnio;
+    const mesesCobrados = chunk.filter(r => r.estado === 'pagado').length;
+    const cerrado = chunk.length === MESES_POR_ANIO; // 12 meses completos → año cerrado
+
+    // Rentabilidad anualizada para este año contractual
+    // Si cerrado: ingAnio/12*12 = ingAnio directo / valorProp
+    // Si en curso: promedio de meses cobrados × 12 / valorProp
+    const rentBase = mesesCobrados > 0 ? (ingAnio / mesesCobrados * 12) : 0;
+    const rentNBase = mesesCobrados > 0 ? (netoAnio / mesesCobrados * 12) : 0;
+    const rentBruta = valorProp > 0 && rentBase  > 0 ? rentBase  / valorProp * 100 : null;
+    const rentNeta  = valorProp > 0 && mesesCobrados > 0 ? rentNBase / valorProp * 100 : null;
+
+    // Label del rango
+    const first = chunk[0];
+    const last  = chunk[chunk.length - 1];
+    const rangoLabel = MESES[first.mi].slice(0,3) + ' ' + first.yr + ' – ' + MESES[last.mi].slice(0,3) + ' ' + last.yr;
+
+    aniosContrato.push({
+      anioNum,
+      rangoLabel,
+      rows: chunk,
+      ingUSD: ingAnio,
+      gasUSD: gasAnio,
+      netoUSD: netoAnio,
+      mesesCobrados,
+      mesesTotal: chunk.length,
+      cerrado,
+      rentBruta,  // % anual
+      rentNeta,   // % anual
+    });
+
+    idx += MESES_POR_ANIO;
+    anioNum++;
   }
 
   return {
     rows,
+    aniosContrato,
     totalIngUSD,
     totalGasUSD,
     netoUSD: totalIngUSD - totalGasUSD,
     mesesContrato: rows.length,
-    primerAnio,
-    primerMes: inicioDate.getMonth(),
+    primerAnio: inicioDate.getFullYear(),
+    primerMes:  inicioDate.getMonth(),
     inicio: p.inicio,
     hoy
   };
@@ -5908,40 +5983,108 @@ function _renderRentabilidadDesdeInicio() {
     return;
   }
 
-  const ri_netoC   = ri.netoUSD >= 0 ? 'var(--accent)' : 'var(--red)';
-  const ri_rentB   = valorUSD_prop > 0 && ri.totalIngUSD > 0 ? (ri.totalIngUSD / valorUSD_prop * 100).toFixed(1) + '%' : '—';
-  const ri_rentN   = valorUSD_prop > 0 && ri.totalIngUSD > 0 ? (ri.netoUSD / valorUSD_prop * 100).toFixed(1) + '%' : '—';
-  const ri_rentNC  = ri.netoUSD >= 0 ? 'var(--green)' : 'var(--red)';
+  // ── KPIs totales acumulados ──
+  const ri_netoC = ri.netoUSD >= 0 ? 'var(--accent)' : 'var(--red)';
+  const mesesCobradosTotal = ri.rows.filter(r => r.estado === 'pagado').length;
+  const ri_rentB = valorUSD_prop > 0 && ri.totalIngUSD > 0 && mesesCobradosTotal > 0
+    ? (ri.totalIngUSD / mesesCobradosTotal * 12 / valorUSD_prop * 100).toFixed(1) + '% anual' : '—';
+  const ri_rentN = valorUSD_prop > 0 && mesesCobradosTotal > 0
+    ? (ri.netoUSD / mesesCobradosTotal * 12 / valorUSD_prop * 100).toFixed(1) + '% anual' : '—';
+  const ri_rentNC = ri.netoUSD >= 0 ? 'var(--green)' : 'var(--red)';
 
-  // Agrupar filas por año
-  let filasPorAnio = '';
-  let anioActual = null;
-  ri.rows.forEach(r => {
-    const yr = r.label.split(' ')[1];
-    if (yr !== anioActual) {
-      if (anioActual !== null) filasPorAnio += `<tr><td colspan="5" style="padding:0;height:8px;"></td></tr>`;
-      anioActual = yr;
-      filasPorAnio += `<tr><td colspan="5" style="padding:6px 12px;background:var(--accent-light);color:var(--accent);font-size:0.72rem;font-weight:700;letter-spacing:0.06em;">📅 ${yr}</td></tr>`;
-    }
-    const neto = r.ingUSD - r.gasUSD;
-    const bg   = r.estado === 'pagado' ? '#e8f5ee' : r.estado === 'vencido' ? '#fdecea' : 'transparent';
-    filasPorAnio += `
-      <tr style="border-bottom:1px solid var(--border);background:${bg};">
-        <td style="padding:9px 12px;font-weight:600;">${r.label.split(' ')[0]}</td>
-        <td style="padding:9px 12px;text-align:right;">${r.ingUSD > 0 ? `<span style="font-weight:700;color:var(--green);">USD ${r.ingUSD.toLocaleString('es-AR')}</span>` : '<span style="color:var(--text3);">—</span>'}</td>
-        <td style="padding:9px 12px;text-align:right;">${r.gasUSD > 0 ? `<span style="font-weight:700;color:var(--red);">USD ${r.gasUSD.toLocaleString('es-AR')}</span>` : '<span style="color:var(--text3);">—</span>'}</td>
-        <td style="padding:9px 12px;text-align:right;">${(r.ingUSD > 0 || r.gasUSD > 0) ? `<span style="font-weight:700;color:${neto >= 0 ? 'var(--green)' : 'var(--red)'};">${neto >= 0 ? '+' : ''}USD ${neto.toLocaleString('es-AR')}</span>` : '<span style="color:var(--text3);">—</span>'}</td>
-        <td style="padding:9px 12px;text-align:center;">${getBadgeForPayStatus(r.estado)}</td>
+  // ── Generar secciones por año contractual ──
+  const seccionesAnios = ri.aniosContrato.map(ac => {
+    const netoC = ac.netoUSD >= 0 ? 'var(--green)' : 'var(--red)';
+    const estadoBadge = ac.cerrado
+      ? '<span style="background:var(--accent-light);color:var(--accent);border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;">✓ Cerrado</span>'
+      : '<span style="background:var(--yellow-light);color:var(--yellow);border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;">⏳ En curso</span>';
+
+    const rbStr = ac.rentBruta !== null ? (ac.rentBruta >= 0 ? '+' : '') + ac.rentBruta.toFixed(1) + '%' : '—';
+    const rnStr = ac.rentNeta  !== null ? (ac.rentNeta  >= 0 ? '+' : '') + ac.rentNeta.toFixed(1)  + '%' : '—';
+    const rnC   = ac.rentNeta !== null && ac.rentNeta >= 0 ? 'var(--green)' : 'var(--red)';
+
+    const filas = ac.rows.map(r => {
+      const neto = r.ingUSD - r.gasUSD;
+      const bg   = r.estado === 'pagado' ? '#e8f5ee' : r.estado === 'vencido' ? '#fdecea' : 'transparent';
+      return `<tr style="border-bottom:1px solid var(--border);background:${bg};">
+        <td style="padding:8px 12px;font-weight:600;">${r.label.split(' ')[0]} ${r.label.split(' ')[1]}</td>
+        <td style="padding:8px 12px;text-align:right;">${r.ingUSD > 0 ? `<span style="font-weight:700;color:var(--green);">USD ${r.ingUSD.toLocaleString('es-AR')}</span>` : '<span style="color:var(--text3);">—</span>'}</td>
+        <td style="padding:8px 12px;text-align:right;">${r.gasUSD > 0 ? `<span style="font-weight:700;color:var(--red);">USD ${r.gasUSD.toLocaleString('es-AR')}</span>` : '<span style="color:var(--text3);">—</span>'}</td>
+        <td style="padding:8px 12px;text-align:right;">${(r.ingUSD > 0 || r.gasUSD > 0) ? `<span style="font-weight:700;color:${neto >= 0 ? 'var(--green)' : 'var(--red)'};">${neto >= 0 ? '+' : ''}USD ${neto.toLocaleString('es-AR')}</span>` : '<span style="color:var(--text3);">—</span>'}</td>
+        <td style="padding:8px 12px;text-align:center;">${getBadgeForPayStatus(r.estado)}</td>
       </tr>`;
-  });
+    }).join('');
+
+    return `
+    <div style="margin-bottom:20px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+      <!-- Header año contractual -->
+      <div style="background:var(--accent);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-weight:800;font-size:1rem;">Año ${ac.anioNum} del contrato</span>
+          <span style="font-size:0.78rem;opacity:0.8;">${ac.rangoLabel}</span>
+          ${estadoBadge}
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;">
+          <div style="text-align:right;">
+            <div style="font-size:0.65rem;opacity:0.7;text-transform:uppercase;letter-spacing:0.06em;">Rent. Bruta anual</div>
+            <div style="font-size:1.2rem;font-weight:900;">${rbStr}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.65rem;opacity:0.7;text-transform:uppercase;letter-spacing:0.06em;">Rent. Neta anual</div>
+            <div style="font-size:1.2rem;font-weight:900;color:${ac.rentNeta !== null && ac.rentNeta < 0 ? '#fca5a5' : '#a7f3d0'};">${rnStr}</div>
+          </div>
+        </div>
+      </div>
+      <!-- Subtotales del año -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--surface2);border-bottom:1px solid var(--border);">
+        <div style="padding:10px 14px;text-align:center;border-right:1px solid var(--border);">
+          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--green);margin-bottom:3px;">Cobrado</div>
+          <div style="font-weight:800;color:var(--green);">USD ${ac.ingUSD.toLocaleString('es-AR')}</div>
+          <div style="font-size:0.7rem;color:var(--text3);">${ac.mesesCobrados}/${ac.mesesTotal} meses</div>
+        </div>
+        <div style="padding:10px 14px;text-align:center;border-right:1px solid var(--border);">
+          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--red);margin-bottom:3px;">Gastos</div>
+          <div style="font-weight:800;color:var(--red);">${ac.gasUSD > 0 ? 'USD ' + ac.gasUSD.toLocaleString('es-AR') : '—'}</div>
+        </div>
+        <div style="padding:10px 14px;text-align:center;">
+          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:3px;">Neto</div>
+          <div style="font-weight:800;color:${netoC};">${ac.netoUSD >= 0 ? '+' : ''}USD ${ac.netoUSD.toLocaleString('es-AR')}</div>
+        </div>
+      </div>
+      <!-- Tabla mes a mes -->
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+          <thead>
+            <tr style="background:var(--bg);border-bottom:1px solid var(--border);">
+              <th style="text-align:left;padding:8px 12px;color:var(--text3);font-size:0.7rem;text-transform:uppercase;font-weight:700;">Mes</th>
+              <th style="text-align:right;padding:8px 12px;color:var(--green);font-size:0.7rem;text-transform:uppercase;font-weight:700;">💰 Ingreso</th>
+              <th style="text-align:right;padding:8px 12px;color:var(--red);font-size:0.7rem;text-transform:uppercase;font-weight:700;">🧾 Gastos</th>
+              <th style="text-align:right;padding:8px 12px;color:var(--accent);font-size:0.7rem;text-transform:uppercase;font-weight:700;">📊 Neto</th>
+              <th style="text-align:center;padding:8px 12px;color:var(--text3);font-size:0.7rem;text-transform:uppercase;font-weight:700;">Estado</th>
+            </tr>
+          </thead>
+          <tbody>${filas}</tbody>
+          <tfoot>
+            <tr style="border-top:2px solid var(--border);background:var(--surface2);">
+              <td style="padding:8px 12px;font-weight:700;font-size:0.82rem;">SUBTOTAL AÑO ${ac.anioNum}</td>
+              <td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--green);">USD ${ac.ingUSD.toLocaleString('es-AR')}</td>
+              <td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--red);">${ac.gasUSD > 0 ? 'USD ' + ac.gasUSD.toLocaleString('es-AR') : '—'}</td>
+              <td style="padding:8px 12px;text-align:right;font-weight:700;color:${netoC};">${ac.netoUSD >= 0 ? '+' : ''}USD ${ac.netoUSD.toLocaleString('es-AR')}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
 
   body.innerHTML = `
-    <!-- KPIs resumen desde inicio -->
+    <!-- KPIs resumen total acumulado -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;">
       <div style="background:var(--green-light);border-radius:var(--radius);padding:16px;text-align:center;">
         <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--green);font-weight:700;margin-bottom:5px;">Total cobrado</div>
         <div style="font-size:1.35rem;font-weight:800;color:var(--green);">USD ${ri.totalIngUSD.toLocaleString('es-AR')}</div>
-        <div style="font-size:0.72rem;color:var(--text3);margin-top:3px;">${ri.mesesContrato} meses</div>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:3px;">${ri.mesesContrato} meses · ${ri.aniosContrato.length} año${ri.aniosContrato.length !== 1 ? 's' : ''} contractual${ri.aniosContrato.length !== 1 ? 'es' : ''}</div>
       </div>
       <div style="background:var(--red-light);border-radius:var(--radius);padding:16px;text-align:center;">
         <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--red);font-weight:700;margin-bottom:5px;">Total gastos</div>
@@ -5952,41 +6095,19 @@ function _renderRentabilidadDesdeInicio() {
         <div style="font-size:1.35rem;font-weight:800;color:${ri_netoC};">${ri.netoUSD >= 0 ? '+' : ''}USD ${ri.netoUSD.toLocaleString('es-AR')}</div>
       </div>
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--text3);font-weight:700;margin-bottom:5px;">Rent. bruta / neta</div>
+        <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--text3);font-weight:700;margin-bottom:5px;">Rent. promedio anual</div>
         <div style="display:flex;justify-content:center;gap:10px;align-items:baseline;">
-          <span style="font-size:1.35rem;font-weight:800;color:var(--accent);">${ri_rentB}</span>
+          <span style="font-size:1.2rem;font-weight:800;color:var(--accent);">${ri_rentB}</span>
           <span style="font-size:0.72rem;color:var(--text3);">bruta</span>
-          <span style="font-size:1.35rem;font-weight:800;color:${ri_rentNC};">${ri_rentN}</span>
+          <span style="font-size:1.2rem;font-weight:800;color:${ri_rentNC};">${ri_rentN}</span>
           <span style="font-size:0.72rem;color:var(--text3);">neta</span>
         </div>
-        ${valorUSD_prop > 0 ? `<div style="font-size:0.7rem;color:var(--text3);margin-top:3px;">Valor: USD ${valorUSD_prop.toLocaleString('es-AR')}</div>` : '<div style="font-size:0.7rem;color:var(--yellow);margin-top:3px;">⚠ Sin valor cargado</div>'}
+        ${valorUSD_prop > 0 ? `<div style="font-size:0.7rem;color:var(--text3);margin-top:3px;">Valor: USD ${valorUSD_prop.toLocaleString('es-AR')}</div>` : ''}
       </div>
     </div>
 
-    <!-- Tabla mes a mes desde inicio -->
-    <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border);background:var(--surface2);">
-            <th style="text-align:left;padding:10px 12px;color:var(--text3);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Mes</th>
-            <th style="text-align:right;padding:10px 12px;color:var(--green);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">💰 Ingreso USD</th>
-            <th style="text-align:right;padding:10px 12px;color:var(--red);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">🧾 Gastos USD</th>
-            <th style="text-align:right;padding:10px 12px;color:var(--accent);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">📊 Resultado</th>
-            <th style="text-align:center;padding:10px 12px;color:var(--text3);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Estado</th>
-          </tr>
-        </thead>
-        <tbody>${filasPorAnio}</tbody>
-        <tfoot>
-          <tr style="border-top:2px solid var(--border);background:var(--surface2);">
-            <td style="padding:10px 12px;font-weight:700;">TOTAL DESDE INICIO</td>
-            <td style="padding:10px 12px;text-align:right;font-weight:700;color:var(--green);">USD ${ri.totalIngUSD.toLocaleString('es-AR')}</td>
-            <td style="padding:10px 12px;text-align:right;font-weight:700;color:var(--red);">USD ${ri.totalGasUSD.toLocaleString('es-AR')}</td>
-            <td style="padding:10px 12px;text-align:right;font-weight:700;color:${ri_netoC};">${ri.netoUSD >= 0 ? '+' : ''}USD ${ri.netoUSD.toLocaleString('es-AR')}</td>
-            <td></td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>`;
+    <!-- Secciones por año contractual -->
+    ${seccionesAnios}`;
 }
 
 function _renderRentabilidadAnual() {
@@ -6151,10 +6272,10 @@ function _renderRentabilidadAnual() {
   const valorUSD_prop = VALORES_PROPIEDAD_USD[currentPropId] || 0;
   if (ri && ri.rows.length > 0) {
     const ri_netoC = ri.netoUSD >= 0 ? 'var(--accent)' : 'var(--red)';
-    const ri_rentBruta = valorUSD_prop > 0 && ri.totalIngUSD > 0
-      ? (ri.totalIngUSD / valorUSD_prop * 100).toFixed(1) + '%' : '—';
-    const ri_rentNeta  = valorUSD_prop > 0 && ri.totalIngUSD > 0
-      ? (ri.netoUSD / valorUSD_prop * 100).toFixed(1) + '%' : '—';
+    const ri_rentBruta = valorUSD_prop > 0 && ri.totalIngUSD > 0 && ri.mesesContrato > 0
+      ? (ri.totalIngUSD / ri.mesesContrato * 12 / valorUSD_prop * 100).toFixed(1) + '% anual' : '—';
+    const ri_rentNeta  = valorUSD_prop > 0 && ri.totalIngUSD > 0 && ri.mesesContrato > 0
+      ? (ri.netoUSD    / ri.mesesContrato * 12 / valorUSD_prop * 100).toFixed(1) + '% anual' : '—';
     const ri_rentNetaColor = ri.netoUSD >= 0 ? 'var(--green)' : 'var(--red)';
 
     const riFilas = ri.rows.map(r => {
