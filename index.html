@@ -1245,6 +1245,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
       <button class="tab-btn active" onclick="switchTab('pagos')">💰 Pagos & Gastos</button>
       <button class="tab-btn" onclick="switchTab('expensas')">🧾 Expensas</button>
       <button class="tab-btn" onclick="switchTab('datos')">📋 Datos</button>
+      <button class="tab-btn" onclick="switchTab('anios')">📆 Años</button>
       <button class="tab-btn" onclick="switchTab('documentos')">📁 Documentos</button>
       <button class="tab-btn" onclick="switchTab('historial')">📝 Historial</button>
       <button class="tab-btn" onclick="switchTab('rentabilidad')">📊 Rentabilidad</button>
@@ -1300,10 +1301,10 @@ textarea.form-control { resize: vertical; min-height: 80px; }
           </div>
         </div>
 
-        <div class="form-section-title">Contrato</div>
+        <div class="form-section-title" id="seccion-contrato" style="scroll-margin-top:80px;">Contrato</div>
 
         <!-- Períodos del contrato -->
-        <div id="periodos-contrato-section">
+        <div id="periodos-contrato-section" style="scroll-margin-top:60px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
             <span style="font-size:0.8rem;color:var(--text3);">Períodos contractuales — cada renovación es un período nuevo</span>
             <button onclick="addPeriodoContrato()" style="padding:5px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">+ Agregar período</button>
@@ -1330,6 +1331,20 @@ textarea.form-control { resize: vertical; min-height: 80px; }
           <div id="autosave-indicator" style="font-size:0.82rem; color:var(--green); display:flex; align-items:center; gap:5px; opacity:0; transition:opacity 0.5s;">✓ Guardado</div>
           <button class="btn btn-primary" onclick="savePropData()">💾 Guardar datos</button>
         </div>
+      </div>
+    </div>
+
+    <!-- TAB: AÑOS CONTRACTUALES -->
+    <div id="tab-anios" class="tab-content">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+          <div>
+            <h4 style="font-family:'Playfair Display',serif;font-weight:400;font-size:1.25rem;margin:0;">📆 Años Contractuales</h4>
+            <p style="font-size:0.8rem;color:var(--text3);margin:4px 0 0;">Seleccioná un año para ver sus datos. Para editar montos o fechas → <button onclick="switchTab('datos'); setTimeout(function(){ var el=document.getElementById('periodos-contrato-section'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }, 150);" style="background:none;border:none;color:var(--accent);font-weight:700;cursor:pointer;font-size:0.8rem;font-family:inherit;padding:0;text-decoration:underline;">tab Datos → sección Contrato</button></p>
+          </div>
+          <button onclick="addPeriodoContrato(); switchTab('datos')" style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;">+ Nuevo período</button>
+        </div>
+        <div id="anios-panel-body"></div>
       </div>
     </div>
 
@@ -2022,38 +2037,55 @@ function initProperties() {
   // ── MIGRACIÓN PUNTUAL: garantizar pagos 2026 correctos ──
   // Corre siempre; solo pisa meses que figuren como pendiente/vencido cuando deberían ser pagado
   (function fixPagos2026() {
-    const TC_ARS = { 2026: [1450,1405,1390] };
-    const TC_PYG = { 2026: [6500,6450,6520] };
+    const TC_ARS = {
+      2024:[1200,1150,1000,1040,1200,1300,1350,1300,1250,1200,1150,1100],
+      2025:[1150,1200,1250,1300,1320,1350,1380,1420,1480,1520,1550,1500],
+      2026:[1450,1405,1390,0,0,0,0,0,0,0,0,0]
+    };
+    const TC_PYG = {
+      2024:[7300,7350,7400,7450,7500,7550,7600,7650,7700,7750,7800,7900],
+      2025:[7300,7250,7200,7150,7100,7050,7000,7050,7100,6950,6800,6500],
+      2026:[6500,6450,6520,0,0,0,0,0,0,0,0,0]
+    };
 
-    function forcePayIfMissing(propId, year, monthIdx, monto, moneda, tc) {
+    // forcePay: siempre pisa el pago con los datos correctos (monto + TC)
+    // No toca pagos pendientes/vencidos del usuario — solo pagados ya cargados o ausentes
+    function forcePay(propId, year, monthIdx, monto, moneda, tc) {
       const key  = 'pay_' + propId + '_' + year;
       const pays = getData(key, {});
       const m    = pays[monthIdx] || {};
-      if (m.estado === 'pagado') return;
+      // Only set if missing OR if monto is wrong (to fix corrupted data)
+      const montoActual = parseFloat(m.monto || 0);
+      const montoEsperado = parseFloat(monto);
+      if (m.estado === 'pagado' && Math.abs(montoActual - montoEsperado) < 1) return; // already correct
       pays[monthIdx] = { estado:'pagado', monto:String(monto), monedaPago:moneda, tc: tc ? String(tc) : '', fecha:'', obs:'' };
       setData(key, pays);
     }
 
-    // Yrigoyen ene-feb-mar 2026
-    forcePayIfMissing('irigoyen', 2026, 0, 1071000, 'ARS', TC_ARS[2026][0]);
-    forcePayIfMissing('irigoyen', 2026, 1, 1071000, 'ARS', TC_ARS[2026][1]);
-    forcePayIfMissing('irigoyen', 2026, 2, 1167000, 'ARS', TC_ARS[2026][2]);
-    // Holmberg ene-feb-mar 2026
-    forcePayIfMissing('holmer',   2026, 0, 300, 'USD', null);
-    forcePayIfMissing('holmer',   2026, 1, 300, 'USD', null);
-    forcePayIfMissing('holmer',   2026, 2, 300, 'USD', null);
-    // PH Melo ene-feb-mar 2026
-    forcePayIfMissing('phmelo',   2026, 0, 400, 'USD', null);
-    forcePayIfMissing('phmelo',   2026, 1, 400, 'USD', null);
-    forcePayIfMissing('phmelo',   2026, 2, 400, 'USD', null);
-    // Grand Chelsea dic 2025 + ene-feb-mar 2026
-    forcePayIfMissing('grandchelsea', 2025, 11, 3900000, 'PYG', 6500);
-    forcePayIfMissing('grandchelsea', 2026,  0, 3900000, 'PYG', TC_PYG[2026][0]);
-    forcePayIfMissing('grandchelsea', 2026,  1, 3900000, 'PYG', TC_PYG[2026][1]);
-    forcePayIfMissing('grandchelsea', 2026,  2, 3900000, 'PYG', TC_PYG[2026][2]);
-    // Love Molas feb-mar 2026
-    forcePayIfMissing('lovemolas', 2026, 1, 3650000, 'PYG', TC_PYG[2026][1]);
-    forcePayIfMissing('lovemolas', 2026, 2, 3650000, 'PYG', TC_PYG[2026][2]);
+    // ── HOLMBERG: jun 2024 → mar 2026, USD 300 ──
+    [5,6,7,8,9,10,11].forEach(m => forcePay('holmer', 2024, m, 300, 'USD', null));
+    [0,1,2,3,4,5,6,7,8,9,10,11].forEach(m => forcePay('holmer', 2025, m, 300, 'USD', null));
+    [0,1,2].forEach(m => forcePay('holmer', 2026, m, 300, 'USD', null));
+
+    // ── MOLAS TOWER: feb–mar 2026, GS 3.650.000 ──
+    forcePay('lovemolas', 2026, 1, 3650000, 'PYG', TC_PYG[2026][1]);
+    forcePay('lovemolas', 2026, 2, 3650000, 'PYG', TC_PYG[2026][2]);
+
+    // ── GRAND CHELSEA: dic 2025 + ene–mar 2026, GS 3.900.000 ──
+    forcePay('grandchelsea', 2025, 11, 3900000, 'PYG', TC_PYG[2025][11]);
+    [0,1,2].forEach(m => forcePay('grandchelsea', 2026, m, 3900000, 'PYG', TC_PYG[2026][m]));
+
+    // ── YRIGOYEN: jun–ago 2025: 950k | sep–nov: 1.002k | dic: 1.071k | ene-feb 2026: 1.071k | mar: 1.167k ──
+    [5,6,7].forEach(m  => forcePay('irigoyen', 2025, m, 950000,  'ARS', TC_ARS[2025][m]));
+    [8,9,10].forEach(m => forcePay('irigoyen', 2025, m, 1002000, 'ARS', TC_ARS[2025][m]));
+    forcePay('irigoyen', 2025, 11, 1071000, 'ARS', TC_ARS[2025][11]);
+    forcePay('irigoyen', 2026, 0,  1071000, 'ARS', TC_ARS[2026][0]);
+    forcePay('irigoyen', 2026, 1,  1071000, 'ARS', TC_ARS[2026][1]);
+    forcePay('irigoyen', 2026, 2,  1167000, 'ARS', TC_ARS[2026][2]);
+
+    // ── PH MELO: abr 2025 → mar 2026, USD 400 ──
+    [3,4,5,6,7,8,9,10,11].forEach(m => forcePay('phmelo', 2025, m, 400, 'USD', null));
+    [0,1,2].forEach(m => forcePay('phmelo', 2026, m, 400, 'USD', null));
   })();
 
   // ── MIGRACIÓN PUNTUAL: garantizar gastos Paraguay cargados ──
@@ -2252,7 +2284,7 @@ function seedGrandChelseaContract() {
    Usa versión para forzar recarga si cambió
 ═══════════════════════════════════════════════ */
 function seedInitialPayments() {
-  const SEED_VERSION = 'v15'; // incrementar si hay que re-seedear
+  const SEED_VERSION = 'v16'; // incrementar si hay que re-seedear
   if (getData('seed_payments_version', null) === SEED_VERSION) return;
 
   // Limpiar pagos previos de todas las propiedades antes de re-sembrar
@@ -2318,7 +2350,7 @@ function seedInitialPayments() {
 }
 
 function seedInitialGastos() {
-  const SEED_VERSION = 'v9';
+  const SEED_VERSION = 'v10';
   if (getData('seed_gastos_version', null) === SEED_VERSION) return;
 
   // Limpiar gastos previos de todas las propiedades antes de re-sembrar
@@ -2521,6 +2553,9 @@ function doLogin() {
     document.getElementById('app-container').classList.remove('hidden');
     document.getElementById('mobile-bottom-nav').style.display = '';
     initProperties();
+    // Re-correr seeds después del login (Supabase ya cargó)
+    if (typeof seedInitialPayments === 'function') seedInitialPayments();
+    if (typeof seedInitialGastos  === 'function') seedInitialGastos();
     showDashboard();
     startPolling();
   } else {
@@ -2559,6 +2594,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Cargar todos los datos desde Supabase primero
   await _loadAllFromSupabase();
   loadCustomPropValues();
+
+  // Re-correr migraciones forzadas DESPUÉS de Supabase (para pisar datos corruptos de la nube)
+  if (typeof seedInitialPayments === 'function') seedInitialPayments();
+  if (typeof seedInitialGastos  === 'function') seedInitialGastos();
+  // Las migraciones puntuales (fixPagos, fixGastos) ya corren en initApp()
 
   setData('session', { logged: false });
   document.getElementById('mobile-bottom-nav').style.display = 'none';
@@ -5239,8 +5279,8 @@ function renderAllPropsTable() {
           rentBrutaStr = '<span style="color:var(--text3);">—</span>';
           rentNetaStr  = '<span style="color:var(--text3);">—</span>';
         }
-        // Inject miniSel into the property name cell via a special marker
-        cobradoAcumStr = miniSel + '<br>' + cobradoAcumStr;
+        // Inject mini select into name cell directly (done above), not in cobrado
+        // cobradoAcumStr stays clean
       } else {
         cobradoAcumStr = '<span style="color:var(--text3);font-size:0.8rem;">Sin inicio de contrato</span>';
         rentBrutaStr   = '<span style="color:var(--text3);">—</span>';
@@ -5330,7 +5370,15 @@ function renderAllPropsTable() {
         (tableMode === 'contrato' && p.inicio
           ? '<span style="font-size:0.78rem;color:var(--accent);font-weight:600;">📋 Inicio: ' + formatDate(p.inicio) + '</span>'
           : tableMode === 'aniocontrato' && p.inicio
-            ? (() => { const ri=calcRentDesdeInicio(id); const ac=ri&&ri.aniosContrato.length>0?ri.aniosContrato[ri.aniosContrato.length-1]:null; return ac?'<span style="font-size:0.78rem;color:var(--accent);font-weight:600;">📆 '+ac.rangoLabel+'</span>':'<span style="font-size:0.78rem;color:var(--text3)">'+p.direccion+'</span>'; })()
+            ? (() => {
+                const ri=calcRentDesdeInicio(id);
+                const ac=getACSeleccionado(id);
+                const anioOpts = ri ? ri.aniosContrato.map(a => {
+                  const sel2 = a.anioNum === (ac ? ac.anioNum : 0) ? 'selected' : '';
+                  return '<option value="' + a.anioNum + '" ' + sel2 + '>' + a.rangoLabel + ' ' + (a.cerrado?'✓':'⏳') + '</option>';
+                }).join('') : '';
+                return '<select onclick="event.stopPropagation()" onchange="setAnioSelProp(\'' + id + '\', this.value, renderAllPropsTable)" style="margin-top:4px;padding:4px 8px;border:1.5px solid var(--accent);border-radius:8px;font-size:0.78rem;font-weight:700;background:var(--accent-light);color:var(--accent);cursor:pointer;font-family:inherit;max-width:220px;">' + anioOpts + '</select>';
+              })()
             : '<span style="font-size:0.78rem;color:var(--text3)">' + p.direccion + '</span>') + '</td>' +
       '<td class="col-hide-mobile">' + (p.pais === 'Argentina' ? '🇦🇷' : '🇵🇾') + ' ' + p.pais + '</td>' +
       '<td>' + (p.inquilino || '<span style="color:var(--text3)">—</span>') + '</td>' +
@@ -5449,6 +5497,7 @@ function loadPropertyDetail(propId) {
   renderDocs();
   renderNotes();
   renderExpensasHistorial();
+  renderAniosPanel();
 }
 
 function setVal(id, val) {
@@ -5577,6 +5626,131 @@ function removePeriodoContrato(idx) {
   renderPeriodosList();
 }
 
+/* ═══════════════════════════════════════════════
+   PANEL DE AÑOS CONTRACTUALES (tab Años)
+═══════════════════════════════════════════════ */
+function renderAniosPanel() {
+  const body = document.getElementById('anios-panel-body');
+  if (!body || !currentPropId) return;
+
+  const p = getPropData(currentPropId);
+  const ri = calcRentDesdeInicio(currentPropId);
+  const valorUSD = VALORES_PROPIEDAD_USD[currentPropId] || 0;
+  const periodos = getPeriodos(currentPropId);
+
+  if (!ri || ri.aniosContrato.length === 0) {
+    body.innerHTML = `
+      <div style="text-align:center;padding:40px 20px;color:var(--text3);">
+        <div style="font-size:2.5rem;margin-bottom:12px;">📋</div>
+        <div style="font-weight:700;font-size:1rem;margin-bottom:8px;">Sin contrato registrado</div>
+        <div style="font-size:0.85rem;margin-bottom:20px;">Agregá un período en la tab Datos para ver los años contractuales.</div>
+        <button onclick="switchTab('datos')" style="padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;">Ir a Datos →</button>
+      </div>`;
+    return;
+  }
+
+  const anioActualSel = getAnioSelProp(currentPropId);
+
+  // Build list of all contract years (past + current + future from periods)
+  // Include future years from periodos that haven't started yet
+  const todosLosAnios = [...ri.aniosContrato];
+
+  // Check if there are future periods not yet in ri (because ri only goes to today)
+  const hoy = new Date();
+  periodos.forEach(per => {
+    if (!per.inicio) return;
+    const perInicio = new Date(per.inicio + 'T00:00:00');
+    if (perInicio > hoy) {
+      // This is a future period — calculate its year number
+      const contratoInicio = new Date((periodos[0].inicio || p.inicio) + 'T00:00:00');
+      const mesesDesdeInicio = (perInicio.getFullYear() - contratoInicio.getFullYear()) * 12 + (perInicio.getMonth() - contratoInicio.getMonth());
+      const anioNum = Math.floor(mesesDesdeInicio / 12) + 1;
+      // Generate the 12 months of this future year
+      const endDate = new Date(perInicio.getFullYear(), perInicio.getMonth() + 11, 1);
+      const rangoLabel = MESES[perInicio.getMonth()].slice(0,3) + ' ' + perInicio.getFullYear() +
+        ' – ' + MESES[endDate.getMonth()].slice(0,3) + ' ' + endDate.getFullYear();
+      if (!todosLosAnios.find(a => a.anioNum === anioNum)) {
+        todosLosAnios.push({
+          anioNum, rangoLabel, rows: [], ingUSD: 0, gasUSD: 0, netoUSD: 0,
+          mesesCobrados: 0, mesesTotal: 12, cerrado: false,
+          rentBruta: null, rentNeta: null, esFuturo: true,
+          periodoMonto: per.monto, periodoMoneda: per.moneda
+        });
+      }
+    }
+  });
+  todosLosAnios.sort((a, b) => a.anioNum - b.anioNum);
+
+  body.innerHTML = todosLosAnios.map(ac => {
+    const isSel = ac.anioNum === anioActualSel;
+    const esFuturo = ac.esFuturo || (!ac.cerrado && ac.mesesTotal === 12 && ac.mesesCobrados === 0 && ac.rows.length === 0);
+
+    const statusColor = esFuturo ? 'var(--yellow)' : ac.cerrado ? 'var(--accent)' : 'var(--green)';
+    const statusBg    = esFuturo ? 'var(--yellow-light)' : ac.cerrado ? 'var(--accent-light)' : 'var(--green-light)';
+    const statusStr   = esFuturo ? '📅 Futuro' : ac.cerrado ? '✓ Cerrado' : '⏳ En curso';
+
+    const rbStr = ac.rentBruta !== null ? '+' + ac.rentBruta.toFixed(1) + '%' : esFuturo ? '—' : '—';
+    const rnStr = ac.rentNeta  !== null ? (ac.rentNeta >= 0 ? '+' : '') + ac.rentNeta.toFixed(1) + '%' : '—';
+
+    // Find corresponding period
+    const perMatch = periodos.find((per, idx) => {
+      if (!per.inicio) return false;
+      const perInicio = new Date(per.inicio + 'T00:00:00');
+      const contratoInicio = new Date((periodos[0].inicio || p.inicio) + 'T00:00:00');
+      const mesesOffset = (perInicio.getFullYear() - contratoInicio.getFullYear()) * 12 + (perInicio.getMonth() - contratoInicio.getMonth());
+      return Math.floor(mesesOffset / 12) + 1 === ac.anioNum;
+    }) || periodos[periodos.length - 1];
+
+    return `
+    <div style="border:2px solid ${isSel ? 'var(--accent)' : 'var(--border)'};border-radius:12px;margin-bottom:14px;overflow:hidden;${isSel ? 'box-shadow:0 2px 16px rgba(26,58,107,0.15);' : ''}">
+      <!-- Header -->
+      <div style="background:${isSel ? 'var(--accent)' : 'var(--surface2)'};padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-weight:800;font-size:1rem;color:${isSel ? '#fff' : 'var(--text)'};">Año ${ac.anioNum} · ${ac.rangoLabel}</span>
+          <span style="background:${statusBg};color:${statusColor};border-radius:20px;padding:2px 12px;font-size:0.75rem;font-weight:700;">${statusStr}</span>
+          ${isSel ? '<span style="background:rgba(255,255,255,0.2);color:#fff;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;">● Seleccionado</span>' : ''}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          ${!isSel ? `<button onclick="setAnioSelProp('${currentPropId}', ${ac.anioNum}, function(){}); renderAniosPanel();" style="padding:5px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;">Seleccionar</button>` : ''}
+          <button onclick="setAnioSelProp('${currentPropId}', ${ac.anioNum}, function(){}); setPayMode('aniocontrato'); switchTab('pagos');" style="padding:5px 14px;background:${isSel?'rgba(255,255,255,0.2)':'var(--surface)'};color:${isSel?'#fff':'var(--text2)'};border:1.5px solid ${isSel?'rgba(255,255,255,0.4)':'var(--border2)'};border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;">Ver pagos →</button>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--border);">
+        <div style="padding:12px 14px;border-right:1px solid var(--border);">
+          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px;">Cobrado</div>
+          <div style="font-weight:800;color:var(--green);font-size:1.05rem;">${ac.ingUSD > 0 ? 'USD ' + Math.round(ac.ingUSD).toLocaleString('es-AR') : '<span style="color:var(--text3);">—</span>'}</div>
+          <div style="font-size:0.72rem;color:var(--text3);">${ac.mesesCobrados}/${ac.mesesTotal} meses</div>
+        </div>
+        <div style="padding:12px 14px;border-right:1px solid var(--border);">
+          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px;">Gastos</div>
+          <div style="font-weight:800;color:var(--red);font-size:1.05rem;">${ac.gasUSD > 0 ? 'USD ' + Math.round(ac.gasUSD).toLocaleString('es-AR') : '<span style="color:var(--text3);">—</span>'}</div>
+        </div>
+        <div style="padding:12px 14px;border-right:1px solid var(--border);">
+          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px;">Rent. Bruta</div>
+          <div style="font-weight:800;color:var(--accent);font-size:1.05rem;">${rbStr}</div>
+        </div>
+        <div style="padding:12px 14px;">
+          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:4px;">Rent. Neta</div>
+          <div style="font-weight:800;color:${ac.rentNeta !== null && ac.rentNeta < 0 ? 'var(--red)' : 'var(--green)'};font-size:1.05rem;">${rnStr}</div>
+        </div>
+      </div>
+
+      <!-- Período info -->
+      ${perMatch ? `
+      <div style="padding:12px 18px;background:var(--bg);display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <div style="font-size:0.82rem;color:var(--text2);"><span style="color:var(--text3);font-size:0.72rem;">Monto contrato</span><br><strong>${perMatch.monto ? (perMatch.moneda + ' ' + parseFloat(perMatch.monto).toLocaleString('es-AR')) : '—'}</strong></div>
+        ${perMatch.ajuste ? `<div style="font-size:0.82rem;color:var(--text2);"><span style="color:var(--text3);font-size:0.72rem;">Ajuste</span><br><strong>${perMatch.ajuste}</strong></div>` : ''}
+        ${perMatch.frecuencia ? `<div style="font-size:0.82rem;color:var(--text2);"><span style="color:var(--text3);font-size:0.72rem;">Frecuencia</span><br><strong>${perMatch.frecuencia}</strong></div>` : ''}
+        <div style="margin-left:auto;">
+          <button onclick="switchTab('datos'); setTimeout(function(){ var el=document.getElementById('periodos-contrato-section'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }, 150);" style="padding:4px 12px;background:var(--accent-light);border:1.5px solid var(--accent);border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;color:var(--accent);">✏️ Editar período</button>
+        </div>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
 function autosave() {
   savePropData(true);
 }
@@ -5621,7 +5795,7 @@ function savePropData(silent = false) {
    TABS
 ═══════════════════════════════════════════════ */
 function switchTab(tab) {
-  const tabs = ['pagos','expensas','datos','documentos','historial','rentabilidad'];
+  const tabs = ['pagos','expensas','datos','anios','documentos','historial','rentabilidad'];
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
     b.classList.toggle('active', tabs[i] === tab);
   });
@@ -5633,6 +5807,7 @@ function switchTab(tab) {
   if (tab === 'expensas') renderExpensasHistorial();
   if (tab === 'documentos') renderDocs();
   if (tab === 'historial') renderNotes();
+  if (tab === 'anios') renderAniosPanel();
   if (tab === 'rentabilidad') {
     if (rentMode === 'aniocontrato') populateSinglePropSelector('rent-anio-num', currentPropId);
     renderRentabilidad();
