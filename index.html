@@ -2744,41 +2744,45 @@ function renderCentroComputos() {
       }
     } else {
       // ── Modo calendario: año seleccionado ──
+      const _tblRefAnio = (esParaguay ? _CC_TC_PYG : _CC_TC_ARS)[year] || [];
       MESES.forEach(function(mes, i) {
         const m = pays[i] || {};
         const monto = parseNum(m.monto);
         const tc    = parseNum(m.tc);
         const mpago = m.monedaPago || monedaLocal;
+        // TC del mes: pago → tabla referencia → promedio anual
+        const tcMes = tc > 0 ? tc : (_tblRefAnio[i] > 0 ? _tblRefAnio[i] : tcProm);
         if (m.estado === 'pagado' && monto > 0) {
-          ingAnio += getMontoUSD(monto, tc, mpago, monedaLocal, tcProm);
+          ingAnio += getMontoUSD(monto, tc, mpago, monedaLocal, tcMes);
         }
         const gMes = getGastosMes(id, year, i);
         gMes.forEach(function(g) {
           const v = parseNum(g.monto); const cur = g.moneda || monedaLocal;
           if (cur === 'USD') gasAnio += v;
-          else if (tc > 0)   gasAnio += Math.round(v / tc);
-          else if (tcProm > 0) gasAnio += Math.round(v / tcProm);
+          else if (tcMes > 0) gasAnio += Math.round(v / tcMes);
         });
       });
     }
 
     // Mes actual siempre del año en curso
+    const _tblRef = (esParaguay ? _CC_TC_PYG : _CC_TC_ARS)[year] || [];
     const mesesArr = MESES.map(function(mes, i) {
       const m = pays[i] || {};
       const monto = parseNum(m.monto);
       const tc    = parseNum(m.tc);
       const mpago = m.monedaPago || monedaLocal;
+      // TC del mes: pago → tabla referencia → promedio anual
+      const tcMes = tc > 0 ? tc : (_tblRef[i] > 0 ? _tblRef[i] : tcProm);
       let ingUSD = 0;
       if (m.estado === 'pagado' && monto > 0) {
-        ingUSD = getMontoUSD(monto, tc, mpago, monedaLocal, tcProm);
+        ingUSD = getMontoUSD(monto, tc, mpago, monedaLocal, tcMes);
       }
       const gMes = getGastosMes(id, year, i);
       let gasUSD = 0;
       gMes.forEach(function(g) {
         const v = parseNum(g.monto); const cur = g.moneda || monedaLocal;
         if (cur === 'USD') { gasUSD += v; }
-        else if (tc > 0)   { gasUSD += Math.round(v / tc); }
-        else if (tcProm > 0) { gasUSD += Math.round(v / tcProm); }
+        else if (tcMes > 0) { gasUSD += Math.round(v / tcMes); }
       });
       return { mes: mes, i: i, estado: m.estado || 'pendiente', ingUSD: ingUSD, gasUSD: gasUSD };
     });
@@ -2849,21 +2853,22 @@ function renderCentroComputos() {
       const pays = getPayments(id, year);
       const esP = (p.pais || '').toLowerCase().includes('paraguay');
       const mLocal = esP ? 'PYG' : (p.moneda || 'ARS');
+      const tblR = (esP ? _CC_TC_PYG : _CC_TC_ARS)[year] || [];
       const tcP = getPropTCProm(pays, esP);
       const m = pays[i] || {};
       const monto = parseNum(m.monto);
       const tc    = parseNum(m.tc);
       const mpago = m.monedaPago || mLocal;
+      const tcMesI = tc > 0 ? tc : (tblR[i] > 0 ? tblR[i] : tcP);
       if (m.estado === 'pagado' && monto > 0) {
-        ingMes += getMontoUSD(monto, tc, mpago, mLocal, tcP);
+        ingMes += getMontoUSD(monto, tc, mpago, mLocal, tcMesI);
       }
       const gMes = getGastosMes(id, year, i);
       gMes.forEach(function(g) {
         const v = parseNum(g.monto);
         const cur = g.moneda || mLocal;
         if (cur === 'USD') gasMes += v;
-        else if (tc > 0)   gasMes += Math.round(v / tc);
-        else if (tcP > 0)  gasMes += Math.round(v / tcP);
+        else if (tcMesI > 0) gasMes += Math.round(v / tcMesI);
       });
     });
     const neto = ingMes - gasMes;
@@ -3324,18 +3329,19 @@ function renderCentroComputos() {
       var esP = (pp.pais||'').toLowerCase().includes('paraguay');
       var mLocal = esP ? 'PYG' : (pp.moneda || 'ARS');
       var tcP = getPropTCProm(pays, esP);
+      var tblRPais = (esP ? _CC_TC_PYG : _CC_TC_ARS)[year] || [];
       for (var mi = 0; mi < 12; mi++) {
         var m = pays[mi] || {};
         var monto = parseNum(m.monto);
         var tc = parseNum(m.tc);
         var mpago = m.monedaPago || mLocal;
-        if (m.estado === 'pagado' && monto > 0) paisIngAnio += getMontoUSD(monto, tc, mpago, mLocal, tcP);
+        var tcMesPais = tc > 0 ? tc : (tblRPais[mi] > 0 ? tblRPais[mi] : tcP);
+        if (m.estado === 'pagado' && monto > 0) paisIngAnio += getMontoUSD(monto, tc, mpago, mLocal, tcMesPais);
         var gMes = getGastosMes(pid, year, mi);
         gMes.forEach(function(g) {
           var v = parseNum(g.monto); var cur = g.moneda || mLocal;
           if (cur === 'USD') paisGasAnio += v;
-          else if (tc > 0) paisGasAnio += Math.round(v / tc);
-          else if (tcP > 0) paisGasAnio += Math.round(v / tcP);
+          else if (tcMesPais > 0) paisGasAnio += Math.round(v / tcMesPais);
         });
       }
       paisValorTotal += VALORES_PROPIEDAD_USD[pid] || 0;
