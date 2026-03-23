@@ -4676,27 +4676,43 @@ function getGastosMes(propId, year, mes) {
     return false;
   });
 }
-function addGastoMes(mes) {
+function addGastoMes(mes, yearOverride) {
   if (!currentPropId) return;
-  const yearEl = document.getElementById('pay-year') || document.getElementById('gasto-year');
-  const year = parseInt(yearEl ? yearEl.value : new Date().getFullYear());
-  const cat = document.getElementById(`gcat-${mes}`)?.value;
-  const monto = document.getElementById(`gmonto-${mes}`)?.value;
-  const desc = document.getElementById(`gdesc-${mes}`)?.value || '';
-  if (!monto || parseFloat(monto) <= 0) { alert('Ingresá un monto válido.'); return; }
+  // yearOverride viene del boton (incluye el anio del bloque renderizado)
+  // Si no se pasa, fallback al selector visible
+  let year;
+  if (yearOverride !== undefined && yearOverride !== null) {
+    year = parseInt(yearOverride);
+  } else {
+    const yearEl = document.getElementById('pay-year') || document.getElementById('gasto-year');
+    year = parseInt(yearEl ? yearEl.value : new Date().getFullYear());
+  }
+  // IDs ahora incluyen anio para evitar colisiones en modo contrato
+  const catEl   = document.getElementById('gcat-'   + year + '-' + mes) || document.getElementById('gcat-'   + mes);
+  const montoEl = document.getElementById('gmonto-' + year + '-' + mes) || document.getElementById('gmonto-' + mes);
+  const descEl  = document.getElementById('gdesc-'  + year + '-' + mes) || document.getElementById('gdesc-'  + mes);
+  const cat   = catEl   ? catEl.value   : '';
+  const monto = montoEl ? montoEl.value : '';
+  const desc  = descEl  ? descEl.value  : '';
+  if (!monto || parseFloat(monto) <= 0) { alert('Ingresa un monto valido.'); return; }
   const p = getPropData(currentPropId);
   const gastos = getGastos(currentPropId, year);
   gastos.push({ mes, categoria: cat, descripcion: desc, monto, moneda: p.moneda || 'ARS' });
   saveGastosById(currentPropId, year, gastos);
-  // clear form
-  if (document.getElementById(`gmonto-${mes}`)) document.getElementById(`gmonto-${mes}`).value = '';
-  if (document.getElementById(`gdesc-${mes}`)) document.getElementById(`gdesc-${mes}`).value = '';
+  // limpiar formulario
+  if (montoEl) montoEl.value = '';
+  if (descEl)  descEl.value  = '';
   renderMesesCombinados();
 }
-function removeGastoMes(mes, indexInMes) {
-  if (!confirm('¿Eliminar este gasto?')) return;
-  const yearEl = document.getElementById('pay-year') || document.getElementById('gasto-year');
-  const year = parseInt(yearEl ? yearEl.value : new Date().getFullYear());
+function removeGastoMes(mes, indexInMes, yearOverride) {
+  if (!confirm('Eliminar este gasto?')) return;
+  let year;
+  if (yearOverride !== undefined && yearOverride !== null) {
+    year = parseInt(yearOverride);
+  } else {
+    const yearEl = document.getElementById('pay-year') || document.getElementById('gasto-year');
+    year = parseInt(yearEl ? yearEl.value : new Date().getFullYear());
+  }
   const all = getGastos(currentPropId, year);
   let count = 0;
   const realIdx = all.findIndex(g => {
@@ -4999,7 +5015,7 @@ function _renderMesesForYear(year, mesesFiltro, returnHTML) {
               ${g.descripcion ? `<span style="font-size:0.8rem;color:var(--text2);margin-left:4px;">${g.descripcion}</span>` : ''}
             </div>
             <span style="font-weight:700;font-size:0.9rem;white-space:nowrap;">${monedaLocalNombre} ${parseNum(g.monto).toLocaleString('es-AR')}</span>
-            <button class="btn btn-danger btn-sm" style="padding:4px 8px;font-size:0.75rem;" onclick="removeGastoMes(${i},${gi})">✕</button>
+            <button class="btn btn-danger btn-sm" style="padding:4px 8px;font-size:0.75rem;" onclick="removeGastoMes(${i},${gi},${year})">✕</button>
           </div>`).join('')
       : `<p style="color:var(--text3);font-size:0.82rem;text-align:center;padding:10px 0;margin:0;">Sin gastos este mes</p>`;
 
@@ -5009,14 +5025,14 @@ function _renderMesesForYear(year, mesesFiltro, returnHTML) {
       : '';
 
     const gastoHTML = `
-      <div class="payment-row" id="gasto-row-${i}" style="height:100%;box-sizing:border-box;border-left:3px solid var(--red);display:flex;flex-direction:column;gap:12px;">
+      <div class="payment-row" id="gasto-row-${year}-${i}" style="height:100%;box-sizing:border-box;border-left:3px solid var(--red);display:flex;flex-direction:column;gap:12px;">
         <div class="payment-month" style="justify-content:space-between;">
           <span>${mes}</span>
           ${resumenMes}
         </div>
         ${tcBlockGasto}
         <!-- Lista de gastos cargados -->
-        <div id="gasto-items-${i}" style="flex:1;">${itemsHtml}</div>
+        <div id="gasto-items-${year}-${i}" style="flex:1;">${itemsHtml}</div>
         <!-- Total USD -->
         ${usdBlockGasto}
         <!-- Formulario para agregar nuevo gasto -->
@@ -5025,7 +5041,7 @@ function _renderMesesForYear(year, mesesFiltro, returnHTML) {
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
             <div class="pay-field-group">
               <span class="pay-field-label">Categoría</span>
-              <select class="form-control" id="gcat-${i}" style="font-size:0.82rem;">
+              <select class="form-control" id="gcat-${year}-${i}" style="font-size:0.82rem;">
                 <option>Mantenimiento</option>
                 <option>Expensa extraordinaria</option>
                 <option>Reparación</option>
@@ -5036,14 +5052,14 @@ function _renderMesesForYear(year, mesesFiltro, returnHTML) {
             </div>
             <div class="pay-field-group">
               <span class="pay-field-label">Monto (${monedaLocalNombre})</span>
-              <input type="text" inputmode="decimal" class="form-control" id="gmonto-${i}" placeholder="0" style="font-size:1rem;font-weight:700;">
+              <input type="text" inputmode="decimal" class="form-control" id="gmonto-${year}-${i}" placeholder="0" style="font-size:1rem;font-weight:700;">
             </div>
           </div>
           <div class="pay-field-group" style="margin-bottom:8px;">
             <span class="pay-field-label">Descripción (opcional)</span>
-            <input type="text" class="form-control" id="gdesc-${i}" placeholder="Ej: Plomería, pintura...">
+            <input type="text" class="form-control" id="gdesc-${year}-${i}" placeholder="Ej: Plomería, pintura...">
           </div>
-          <button class="btn btn-primary" style="width:100%;background:var(--red);border-color:var(--red);" onclick="addGastoMes(${i})">
+          <button class="btn btn-primary" style="width:100%;background:var(--red);border-color:var(--red);" onclick="addGastoMes(${i}, ${year})">
             + Agregar gasto
           </button>
         </div>
@@ -5177,7 +5193,8 @@ function autoSavePayRow(i) {
   const tc = parseNum(document.getElementById(`pay-tc-${i}`)?.value);
   const p = getPropData(currentPropId);
   const esParaguay = (p.pais||'').toLowerCase().includes('paraguay');
-  const tcInput = document.querySelector(`#gasto-row-${i} input[readonly]`);
+  // Buscar el row con ID que incluye año (nuevo formato) o sin año (fallback)
+  const tcInput = document.querySelector(`#gasto-row-${year}-${i} input[readonly]`) || document.querySelector(`#gasto-row-${i} input[readonly]`);
   if (tcInput) tcInput.value = tc > 0 ? (esParaguay ? '\u20B2 ' : '$ ') + tc.toLocaleString('es-AR') : '\u2014  (no cargado en Pagos)';
 }
 
