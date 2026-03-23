@@ -2020,7 +2020,7 @@ function initProperties() {
       const key  = 'pay_' + propId + '_' + year;
       const pays = getData(key, {});
       const m    = pays[monthIdx] || {};
-      if (m.estado === 'pagado') return; // ya está bien, no tocar
+      if (m.estado === 'pagado') return;
       pays[monthIdx] = { estado:'pagado', monto:String(monto), monedaPago:moneda, tc: tc ? String(tc) : '', fecha:'', obs:'' };
       setData(key, pays);
     }
@@ -2045,6 +2045,46 @@ function initProperties() {
     // Love Molas feb-mar 2026
     forcePayIfMissing('lovemolas', 2026, 1, 3650000, 'PYG', TC_PYG[2026][1]);
     forcePayIfMissing('lovemolas', 2026, 2, 3650000, 'PYG', TC_PYG[2026][2]);
+  })();
+
+  // ── MIGRACIÓN PUNTUAL: garantizar gastos Paraguay cargados ──
+  // Corre siempre; solo agrega el gasto si ese mes todavía no tiene ninguno
+  (function fixGastosParaguay() {
+    function forceGasto(propId, year, mes, categoria, monto, moneda) {
+      const key    = 'gastos_' + propId + '_' + year;
+      const gastos = getData(key, []);
+      // Eliminar cualquier gasto existente de ese mes con esa categoría y reemplazar
+      const otros = gastos.filter(function(g) {
+        return !(parseInt(g.mes) === mes && g.categoria === categoria);
+      });
+      otros.push({ mes: mes, categoria: categoria, descripcion: '', monto: String(monto), moneda: moneda });
+      setData(key, otros);
+    }
+
+    // Love Molas (PYG)
+    forceGasto('lovemolas', 2026, 0, 'Expensa ordinaria', 518000, 'PYG'); // Ene
+    forceGasto('lovemolas', 2026, 1, 'Expensa ordinaria', 490000, 'PYG'); // Feb
+    forceGasto('lovemolas', 2026, 2, 'Expensa ordinaria', 529000, 'PYG'); // Mar
+
+    // Grand Chelsea (PYG)
+    forceGasto('grandchelsea', 2025, 11, 'Expensa ordinaria', 473000, 'PYG'); // Dic 2025
+    forceGasto('grandchelsea', 2026,  0, 'Expensa ordinaria', 447000, 'PYG'); // Ene
+    forceGasto('grandchelsea', 2026,  1, 'Expensa ordinaria', 447000, 'PYG'); // Feb
+    forceGasto('grandchelsea', 2026,  2, 'Expensa ordinaria', 470000, 'PYG'); // Mar
+
+    // Holmberg (ARS)
+    forceGasto('holmer', 2025, 11, 'Expensa extraordinaria', 127000, 'ARS'); // Dic
+    forceGasto('holmer', 2026,  0, 'Expensa extraordinaria', 127000, 'ARS'); // Ene
+    forceGasto('holmer', 2026,  1, 'Expensa extraordinaria', 127000, 'ARS'); // Feb
+    forceGasto('holmer', 2026,  2, 'Expensa extraordinaria', 127000, 'ARS'); // Mar
+
+    // Yrigoyen (ARS)
+    forceGasto('irigoyen', 2025,  8, 'Expensa extraordinaria',  17000, 'ARS'); // Sep
+    forceGasto('irigoyen', 2025, 10, 'Expensa extraordinaria',  75000, 'ARS'); // Nov
+    forceGasto('irigoyen', 2025, 11, 'Expensa extraordinaria',  75000, 'ARS'); // Dic
+    forceGasto('irigoyen', 2026,  0, 'Expensa extraordinaria',  17000, 'ARS'); // Ene
+    forceGasto('irigoyen', 2026,  1, 'Expensa extraordinaria',  35000, 'ARS'); // Feb
+    forceGasto('irigoyen', 2026,  2, 'Expensa extraordinaria',  17000, 'ARS'); // Mar
   })();
 }
 
@@ -2203,7 +2243,7 @@ function seedGrandChelseaContract() {
    Usa versión para forzar recarga si cambió
 ═══════════════════════════════════════════════ */
 function seedInitialPayments() {
-  const SEED_VERSION = 'v12'; // incrementar si hay que re-seedear
+  const SEED_VERSION = 'v13'; // incrementar si hay que re-seedear
   if (getData('seed_payments_version', null) === SEED_VERSION) return;
 
   // Limpiar pagos previos de todas las propiedades antes de re-sembrar
@@ -2269,7 +2309,7 @@ function seedInitialPayments() {
 }
 
 function seedInitialGastos() {
-  const SEED_VERSION = 'v5';
+  const SEED_VERSION = 'v7';
   if (getData('seed_gastos_version', null) === SEED_VERSION) return;
 
   // Limpiar gastos previos de todas las propiedades antes de re-sembrar
@@ -2690,9 +2730,18 @@ function renderCentroComputos() {
     let ingAnio = 0, gasAnio = 0;
 
     if (ccMode === 'contrato') {
-      // ── Usar datos acumulados desde inicio de contrato ──
+      // ── Usar año contractual en curso (no acumulado total) ──
       const ri = calcRentDesdeInicio(id);
-      if (ri) { ingAnio = ri.totalIngUSD; gasAnio = ri.totalGasUSD; }
+      if (ri) {
+        // Tomar el año contractual en curso (el último)
+        const anioActual = ri.aniosContrato.length > 0 ? ri.aniosContrato[ri.aniosContrato.length - 1] : null;
+        if (anioActual) {
+          ingAnio = anioActual.ingUSD;
+          gasAnio = anioActual.gasUSD;
+        } else {
+          ingAnio = ri.totalIngUSD; gasAnio = ri.totalGasUSD;
+        }
+      }
     } else {
       // ── Modo calendario: año seleccionado ──
       MESES.forEach(function(mes, i) {
@@ -2743,6 +2792,18 @@ function renderCentroComputos() {
     var valorProp = VALORES_PROPIEDAD_USD[id] || 0;
     var netoMes  = mesCur.ingUSD - mesCur.gasUSD;
     var netoAnio = ingAnio - gasAnio;
+
+    // En modo contrato: meses cobrados del año contractual en curso
+    // En modo calendario: meses transcurridos del año
+    var mesesBase;
+    if (ccMode === 'contrato') {
+      const ri2 = calcRentDesdeInicio(id);
+      const anioActual2 = ri2 && ri2.aniosContrato.length > 0 ? ri2.aniosContrato[ri2.aniosContrato.length - 1] : null;
+      mesesBase = anioActual2 ? Math.max(1, anioActual2.mesesCobrados) : (curMonth + 1);
+    } else {
+      mesesBase = curMonth + 1;
+    }
+
     return {
       id: id, p: p, valorProp: valorProp,
       ingAnio: ingAnio, gasAnio: gasAnio, netoAnio: netoAnio,
@@ -2750,8 +2811,8 @@ function renderCentroComputos() {
       estadoMes: mesCur.estado, mesesArr: mesesArr,
       rentBrutaMes:  valorProp > 0 && mesCur.ingUSD > 0 ? (mesCur.ingUSD / valorProp * 100 * 12) : null,
       rentNetaMes:   valorProp > 0 && (mesCur.ingUSD > 0 || mesCur.gasUSD > 0) ? (netoMes / valorProp * 100 * 12) : null,
-      rentBrutaAnio: valorProp > 0 && ingAnio > 0 ? (ingAnio / (curMonth + 1) * 12 / valorProp * 100) : null,
-      rentNetaAnio:  valorProp > 0 && (ingAnio > 0 || gasAnio > 0) ? (netoAnio / (curMonth + 1) * 12 / valorProp * 100) : null
+      rentBrutaAnio: valorProp > 0 && ingAnio > 0 ? (ingAnio / mesesBase * 12 / valorProp * 100) : null,
+      rentNetaAnio:  valorProp > 0 && (ingAnio > 0 || gasAnio > 0) ? (netoAnio / mesesBase * 12 / valorProp * 100) : null
     };
   });
 
@@ -2766,8 +2827,18 @@ function renderCentroComputos() {
   // Rent bruta mensual portfolio = (ingreso mes / valor total) * 100
   var portRentBrutaMes  = portValorTotal > 0 && portIngMes  > 0 ? (portIngMes  / portValorTotal * 100 * 12) : null;
   var portRentNetaMes   = portValorTotal > 0 && (portIngMes > 0 || portGasMes > 0) ? (portNetoMes / portValorTotal * 100 * 12) : null;
-  var portRentBrutaAnio = portValorTotal > 0 && portIngAnio > 0 ? (portIngAnio / (curMonth + 1) * 12 / portValorTotal * 100) : null;
-  var portRentNetaAnio  = portValorTotal > 0 && (portIngAnio > 0 || portGasAnio > 0) ? (portNetoAnio / (curMonth + 1) * 12 / portValorTotal * 100) : null;
+  // Para el modo contrato: usar promedio de mesesBase de cada propiedad
+  var portMesesBaseTotal = 0, portMesesBaseCount = 0;
+  if (ccMode === 'contrato') {
+    allEntries.forEach(function(entry) {
+      const ri3 = calcRentDesdeInicio(entry[0]);
+      const ac3 = ri3 && ri3.aniosContrato.length > 0 ? ri3.aniosContrato[ri3.aniosContrato.length - 1] : null;
+      if (ac3) { portMesesBaseTotal += Math.max(1, ac3.mesesCobrados); portMesesBaseCount++; }
+    });
+  }
+  var portMesesBase = ccMode === 'contrato' && portMesesBaseCount > 0 ? portMesesBaseTotal / portMesesBaseCount : (curMonth + 1);
+  var portRentBrutaAnio = portValorTotal > 0 && portIngAnio > 0 ? (portIngAnio / portMesesBase * 12 / portValorTotal * 100) : null;
+  var portRentNetaAnio  = portValorTotal > 0 && (portIngAnio > 0 || portGasAnio > 0) ? (portNetoAnio / portMesesBase * 12 / portValorTotal * 100) : null;
 
   // ─── Tabla mensual del portfolio ───
   let tablaFilasHTML = '';
@@ -3113,6 +3184,7 @@ function renderCentroComputos() {
   // ─── Tabla: Rentabilidad desde inicio de contrato por propiedad ───
   var desdeInicioRows = '';
   var portTotalIngInicio = 0, portTotalGasInicio = 0;
+  var portMesesCobradosTotal = 0;
 
   allEntries.forEach(function(entry) {
     var pid = entry[0]; var pp = entry[1];
@@ -3123,18 +3195,30 @@ function renderCentroComputos() {
     portTotalIngInicio += ri.totalIngUSD;
     portTotalGasInicio += ri.totalGasUSD;
 
-    var rentB  = valProp > 0 && ri.totalIngUSD > 0 && ri.mesesContrato > 0 ? (ri.totalIngUSD / ri.mesesContrato * 12 / valProp * 100).toFixed(1) + '%' : '—';
-    var rentN  = valProp > 0 && ri.totalIngUSD > 0 && ri.mesesContrato > 0 ? (ri.netoUSD    / ri.mesesContrato * 12 / valProp * 100).toFixed(1) + '%' : '—';
+    // Usar año contractual en curso para la rentabilidad (no acumulado total)
+    // El "año en curso" es el último anioContrato
+    var anioActual = ri.aniosContrato.length > 0 ? ri.aniosContrato[ri.aniosContrato.length - 1] : null;
+    var mesesCob = anioActual ? anioActual.mesesCobrados : ri.rows.filter(function(r){ return r.estado === 'pagado'; }).length;
+    portMesesCobradosTotal += mesesCob;
+
+    var rentB, rentN;
+    if (anioActual && mesesCob > 0 && valProp > 0) {
+      rentB = (anioActual.ingUSD / mesesCob * 12 / valProp * 100).toFixed(1) + '%';
+      rentN = (anioActual.netoUSD / mesesCob * 12 / valProp * 100).toFixed(1) + '%';
+    } else {
+      rentB = '—'; rentN = '—';
+    }
     var rentNC = ri.netoUSD >= 0 ? '#2e7d52' : '#c0392b';
     var flag   = pp.pais === 'Argentina' ? '🇦🇷' : '🇵🇾';
     var netoC  = ri.netoUSD >= 0 ? '#1a3a6b' : '#c0392b';
     var netoS  = (ri.netoUSD >= 0 ? '+' : '') + 'USD ' + Math.round(ri.netoUSD).toLocaleString('es-AR');
+    var anioLabel = anioActual ? ' · Año ' + anioActual.anioNum + (anioActual.cerrado ? ' ✓' : ' ⏳') : '';
 
     desdeInicioRows +=
       '<tr style="border-bottom:1px solid var(--border);">' +
       '<td style="padding:10px 12px;">' +
         '<div style="font-weight:700;font-size:0.9rem;">' + flag + ' ' + (pp.nombre || pid) + '</div>' +
-        '<div style="font-size:0.72rem;color:#9b9590;margin-top:1px;">Desde ' + formatDate(pp.inicio) + ' · ' + ri.mesesContrato + ' mes' + (ri.mesesContrato !== 1 ? 'es' : '') + '</div>' +
+        '<div style="font-size:0.72rem;color:#9b9590;margin-top:1px;">Desde ' + formatDate(pp.inicio) + ' · ' + ri.mesesContrato + ' mes' + (ri.mesesContrato !== 1 ? 'es' : '') + anioLabel + '</div>' +
       '</td>' +
       '<td style="padding:10px 12px;text-align:right;color:#2e7d52;font-weight:600;">USD ' + Math.round(ri.totalIngUSD).toLocaleString('es-AR') + '</td>' +
       '<td style="padding:10px 12px;text-align:right;color:#c0392b;font-weight:600;">' + (ri.totalGasUSD > 0 ? 'USD ' + Math.round(ri.totalGasUSD).toLocaleString('es-AR') : '<span style="color:#9b9590">—</span>') + '</td>' +
@@ -3146,8 +3230,12 @@ function renderCentroComputos() {
   });
 
   var portNetoInicio = portTotalIngInicio - portTotalGasInicio;
-  var portRBInicio   = portValorTotal > 0 && portTotalIngInicio > 0 ? (portTotalIngInicio / portValorTotal * 100).toFixed(1) + '%' : '—';
-  var portRNInicio   = portValorTotal > 0 && portTotalIngInicio > 0 ? (portNetoInicio / portValorTotal * 100).toFixed(1) + '%' : '—';
+  // Portfolio: usar promedio ponderado de año en curso de cada prop
+  var portMesesEfectivos = portMesesCobradosTotal > 0 ? portMesesCobradosTotal / Math.max(1, allEntries.filter(function(e){ return e[1].inicio; }).length) : 0;
+  var portRBInicio = portValorTotal > 0 && portTotalIngInicio > 0 && portMesesEfectivos > 0
+    ? (portTotalIngInicio / portMesesEfectivos * 12 / portValorTotal * 100).toFixed(1) + '%' : '—';
+  var portRNInicio = portValorTotal > 0 && portMesesEfectivos > 0
+    ? (portNetoInicio / portMesesEfectivos * 12 / portValorTotal * 100).toFixed(1) + '%' : '—';
   var portRNIColor   = portNetoInicio >= 0 ? '#2e7d52' : '#c0392b';
 
   var desdeInicioHTML = desdeInicioRows ? (
