@@ -908,8 +908,8 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     Inversión
   </button>
   <button class="mob-nav-btn" id="mob-btn-exportar" onclick="exportData()">
-    <span class="mob-nav-icon">📤</span>
-    Exportar
+    <span class="mob-nav-icon">💾</span>
+    Backup
   </button>
 </div>
 
@@ -951,8 +951,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   <div class="topbar-actions">
     <span id="sync-status" style="font-size:0.75rem;font-weight:600;color:var(--text3);white-space:nowrap;">☁️ En línea</span>
     <button class="btn btn-ghost btn-sm" onclick="showDashboard()" style="font-weight:700;color:var(--accent);" title="Ir al Inicio">🏠 Inicio</button>
-    <button class="btn btn-ghost btn-sm" onclick="exportData()" title="Exportar datos">📤 Exportar</button>
-    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-input').click()" title="Importar datos">📥 Importar</button>
+    <button class="btn btn-ghost btn-sm" onclick="exportData()" title="Backup & Restaurar" style="font-weight:700;">💾 Backup</button>
     <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
     <button class="btn btn-danger btn-sm" onclick="doLogout()">Salir</button>
   </div>
@@ -1966,6 +1965,8 @@ function initProperties() {
 
   // Sembrar pagos históricos pre-cargados
   seedInitialPayments();
+  // Sembrar gastos históricos pre-cargados
+  seedInitialGastos();
 }
 
 function seedChelseaPlaza() {
@@ -2178,6 +2179,49 @@ function seedInitialPayments() {
   [0,1,2].forEach(m => seedPay('phmelo', 2026, m, 400, 'USD'));
 
   setData('seed_payments_version', SEED_VERSION);
+}
+
+function seedInitialGastos() {
+  const SEED_VERSION = 'v1';
+  if (getData('seed_gastos_version', null) === SEED_VERSION) return;
+
+  function seedGasto(propId, year, mes, categoria, monto, moneda) {
+    const key = 'gastos_' + propId + '_' + year;
+    const gastos = getData(key, []);
+    gastos.push({ mes, categoria, descripcion: '', monto: String(monto), moneda });
+    setData(key, gastos);
+  }
+
+  // ── YRIGOYEN (ARS) ──
+  seedGasto('irigoyen', 2025, 8,  'Expensa extraordinaria', 17000,  'ARS'); // Sep
+  // Oct 2025: sin gastos
+  seedGasto('irigoyen', 2025, 10, 'Expensa extraordinaria', 75000,  'ARS'); // Nov
+  seedGasto('irigoyen', 2025, 11, 'Expensa extraordinaria', 75000,  'ARS'); // Dic
+  seedGasto('irigoyen', 2026, 0,  'Expensa extraordinaria', 17000,  'ARS'); // Ene
+  seedGasto('irigoyen', 2026, 1,  'Expensa extraordinaria', 35000,  'ARS'); // Feb
+  seedGasto('irigoyen', 2026, 2,  'Expensa extraordinaria', 17000,  'ARS'); // Mar
+
+  // ── HOLMBERG 3724 (ARS) ──
+  seedGasto('holmer',   2025, 11, 'Expensa extraordinaria', 127000, 'ARS'); // Dic
+  seedGasto('holmer',   2026, 0,  'Expensa extraordinaria', 127000, 'ARS'); // Ene
+  seedGasto('holmer',   2026, 1,  'Expensa extraordinaria', 127000, 'ARS'); // Feb
+  seedGasto('holmer',   2026, 2,  'Expensa extraordinaria', 127000, 'ARS'); // Mar
+
+  // ── PH MELO: sin gastos ──
+
+  // ── LOVE MOLAS (PYG) ──
+  seedGasto('lovemolas',   2026, 0, 'Expensa ordinaria', 518000, 'PYG'); // Ene
+  seedGasto('lovemolas',   2026, 1, 'Expensa ordinaria', 490000, 'PYG'); // Feb
+  seedGasto('lovemolas',   2026, 2, 'Expensa ordinaria', 529000, 'PYG'); // Mar
+
+  // ── GRAND CHELSEA (PYG) ──
+  // Nota: el usuario escribió "Diciembre 2026" pero en contexto es Diciembre 2025
+  seedGasto('grandchelsea', 2025, 11, 'Expensa ordinaria', 473000, 'PYG'); // Dic 2025
+  seedGasto('grandchelsea', 2026, 0,  'Expensa ordinaria', 447000, 'PYG'); // Ene
+  seedGasto('grandchelsea', 2026, 1,  'Expensa ordinaria', 447000, 'PYG'); // Feb
+  seedGasto('grandchelsea', 2026, 2,  'Expensa ordinaria', 470000, 'PYG'); // Mar
+
+  setData('seed_gastos_version', SEED_VERSION);
 }
 
 const HOLMBERG_CONTRACT_TEXT = `CONTRATO DE LOCACIÓN CON DESTINO VIVIENDA — HOLMBERG 3724 2A
@@ -5043,6 +5087,7 @@ function _renderMesesForYear(year, mesesFiltro, returnHTML) {
               <span class="pay-field-label">Categoría</span>
               <select class="form-control" id="gcat-${year}-${i}" style="font-size:0.82rem;">
                 <option>Mantenimiento</option>
+                ${esParaguay ? '<option>Expensa ordinaria</option>' : ''}
                 <option>Expensa extraordinaria</option>
                 <option>Reparación</option>
                 <option>Impuesto / Tasa</option>
@@ -5774,19 +5819,65 @@ function removeNote(id) {
 /* ═══════════════════════════════════════════════
    EXPORT / IMPORT
 ═══════════════════════════════════════════════ */
-function exportData() {
+/* ═══════════════════════════════════════════════
+   BACKUP & RESTORE SYSTEM
+═══════════════════════════════════════════════ */
+
+function _collectAllData() {
   const allData = {};
   Object.entries(_localCache).forEach(([key, val]) => {
     if (key !== 'session') allData[key] = val;
   });
-  const json = JSON.stringify(allData, null, 2);
+  return allData;
+}
+
+function _countStats(data) {
+  const props   = (data['properties'] || []).length;
+  let pagos = 0, gastos = 0;
+  Object.keys(data).forEach(k => {
+    if (k.startsWith('payments_'))  { const arr = data[k]; if (Array.isArray(arr)) pagos  += arr.filter(x=>x&&x.monto).length; else if (arr && typeof arr==='object') pagos += Object.values(arr).filter(x=>x&&x.monto).length; }
+    if (k.startsWith('gastos_'))    { const arr = data[k]; if (Array.isArray(arr)) gastos += arr.length; }
+  });
+  return { props, pagos, gastos };
+}
+
+function exportData() {
+  showBackupPanel();
+}
+
+function exportDataDirect() {
+  const allData = _collectAllData();
+  const stats   = _countStats(allData);
+  const now     = new Date();
+  const ts      = now.toISOString().slice(0,19).replace('T','_').replace(/:/g,'-');
+  const payload = {
+    _meta: {
+      version:   2,
+      exportedAt: now.toISOString(),
+      app:       'CRM Alquileres',
+      stats
+    },
+    data: allData
+  };
+  const json = JSON.stringify(payload, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `crm-alquileres-backup-${new Date().toISOString().slice(0,10)}.json`;
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `crm-backup_${ts}.json`;
   a.click();
   URL.revokeObjectURL(url);
+
+  // Registrar en historial de backups
+  const hist = getData('_backup_history', []);
+  hist.unshift({ ts: now.toISOString(), stats, fileName: `crm-backup_${ts}.json` });
+  if (hist.length > 20) hist.length = 20; // Guardar últimos 20
+  setData('_backup_history', hist);
+
+  // Feedback visual en el panel si está abierto
+  const badge = document.getElementById('backup-last-ts');
+  if (badge) badge.textContent = 'Ahora mismo';
+  renderBackupHistory();
 }
 
 function importData(event) {
@@ -5795,19 +5886,156 @@ function importData(event) {
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
-      const data = JSON.parse(e.target.result);
-      if (!confirm(`¿Importar datos? Esto sobreescribirá los datos actuales.`)) return;
-      Object.entries(data).forEach(([key, val]) => {
-        setData(key, val);
+      const parsed = JSON.parse(e.target.result);
+      // Soportar formato v2 (con _meta) y v1 (sin _meta, objeto plano)
+      const isV2 = parsed._meta && parsed.data;
+      const data = isV2 ? parsed.data : parsed;
+      const meta = isV2 ? parsed._meta : null;
+
+      // Preview en el panel de backup
+      const stats = _countStats(data);
+      const infoLines = [
+        meta ? `📅 Exportado: ${new Date(meta.exportedAt).toLocaleString('es-AR')}` : '',
+        `🏠 Propiedades: ${stats.props}`,
+        `💰 Pagos cargados: ${stats.pagos}`,
+        `🧾 Gastos cargados: ${stats.gastos}`,
+      ].filter(Boolean).join('\n');
+
+      if (!confirm(`¿Restaurar este backup?\n\n${infoLines}\n\n⚠️ ESTO REEMPLAZARÁ todos los datos actuales.`)) {
+        event.target.value = '';
+        return;
+      }
+
+      // Limpiar datos actuales excepto historial de backups
+      const backupHist = getData('_backup_history', []);
+      Object.keys(_localCache).forEach(k => {
+        if (k !== 'session' && k !== '_backup_history') {
+          localStorage.removeItem(k);
+          delete _localCache[k];
+        }
       });
-      alert('✅ Datos importados correctamente. Recargando...');
+
+      // Restaurar datos del backup
+      Object.entries(data).forEach(([key, val]) => {
+        if (key !== '_backup_history') setData(key, val);
+      });
+
+      // Preservar historial
+      setData('_backup_history', backupHist);
+
+      alert('✅ Backup restaurado correctamente. Recargando...');
       location.reload();
     } catch(err) {
-      alert('❌ Error al importar: archivo inválido.');
+      alert('❌ Error al importar: archivo inválido o corrupto.\n' + err.message);
     }
   };
   reader.readAsText(file);
   event.target.value = '';
+}
+
+function renderBackupHistory() {
+  const el = document.getElementById('backup-history-list');
+  if (!el) return;
+  const hist = getData('_backup_history', []);
+  if (hist.length === 0) {
+    el.innerHTML = '<p style="color:var(--text3);font-size:0.85rem;text-align:center;padding:16px 0;">Todavía no hay backups registrados en este navegador.</p>';
+    return;
+  }
+  el.innerHTML = hist.map((h, idx) => {
+    const d = new Date(h.ts);
+    const fecha = d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+    const hora  = d.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:700;font-size:0.88rem;">${fecha} — ${hora}</div>
+          <div style="font-size:0.78rem;color:var(--text3);margin-top:2px;">
+            🏠 ${h.stats.props} prop. &nbsp;·&nbsp; 💰 ${h.stats.pagos} pagos &nbsp;·&nbsp; 🧾 ${h.stats.gastos} gastos
+          </div>
+          <div style="font-size:0.72rem;color:var(--text3);margin-top:2px;font-family:monospace;">${h.fileName}</div>
+        </div>
+        ${idx === 0 ? '<span style="background:var(--green-light);color:var(--green);border-radius:20px;padding:2px 10px;font-size:0.75rem;font-weight:700;">Último</span>' : ''}
+      </div>`;
+  }).join('');
+}
+
+function showBackupPanel() {
+  let panel = document.getElementById('backup-panel-overlay');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'backup-panel-overlay';
+    panel.style.cssText = 'position:fixed;inset:0;background:rgba(26,24,20,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px);';
+    panel.innerHTML = `
+      <div style="background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow2);padding:32px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;position:relative;">
+
+        <button onclick="closeBackupPanel()" style="position:absolute;top:16px;right:16px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;width:32px;height:32px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);">✕</button>
+
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+          <div style="width:44px;height:44px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">💾</div>
+          <div>
+            <div style="font-size:1.15rem;font-weight:800;letter-spacing:-0.03em;">Backup & Restaurar</div>
+            <div style="font-size:0.82rem;color:var(--text3);">Tus datos se guardan en este navegador. Hacé backup seguido.</div>
+          </div>
+        </div>
+
+        <!-- Alerta importante -->
+        <div style="background:var(--yellow-light);border:1px solid #f5d5a8;border-radius:8px;padding:12px 14px;font-size:0.83rem;color:var(--yellow);margin-bottom:20px;display:flex;gap:8px;">
+          <span style="font-size:1rem;">⚠️</span>
+          <span>Los datos solo existen en <strong>este navegador</strong>. Si borrás el caché o usás otro navegador, se pierden. Exportá seguido.</span>
+        </div>
+
+        <!-- Estado actual -->
+        <div id="backup-current-stats" style="background:var(--bg);border-radius:8px;padding:14px 16px;margin-bottom:20px;"></div>
+
+        <!-- Acciones principales -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">
+          <button onclick="exportDataDirect()" style="background:var(--accent);color:#fff;border:none;border-radius:var(--radius2);padding:14px;font-size:0.9rem;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font-family:inherit;">
+            <span style="font-size:1.5rem;">📤</span>
+            <span>Exportar backup</span>
+            <span style="font-size:0.75rem;font-weight:500;opacity:0.85;">Descarga un archivo .json</span>
+          </button>
+          <button onclick="document.getElementById('import-input').click()" style="background:var(--surface);color:var(--text);border:2px dashed var(--border2);border-radius:var(--radius2);padding:14px;font-size:0.9rem;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font-family:inherit;">
+            <span style="font-size:1.5rem;">📥</span>
+            <span>Restaurar backup</span>
+            <span style="font-size:0.75rem;font-weight:500;color:var(--text3);">Cargá un archivo .json</span>
+          </button>
+        </div>
+
+        <!-- Historial -->
+        <div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);margin-bottom:10px;">📋 Historial de backups (este navegador)</div>
+        <div id="backup-history-list"></div>
+
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:0.78rem;color:var(--text3);text-align:center;">
+          💡 El archivo .json contiene <strong>todas</strong> tus propiedades, pagos, gastos y documentos.<br>Guardalo en Google Drive, Dropbox o donde prefieras.
+        </div>
+      </div>`;
+    document.body.appendChild(panel);
+    panel.addEventListener('click', (e) => { if (e.target === panel) closeBackupPanel(); });
+  }
+  panel.style.display = 'flex';
+
+  // Llenar stats actuales
+  const statsEl = document.getElementById('backup-current-stats');
+  if (statsEl) {
+    const stats = _countStats(_collectAllData());
+    const hist  = getData('_backup_history', []);
+    const lastTs = hist.length > 0 ? new Date(hist[0].ts).toLocaleString('es-AR') : 'Nunca';
+    statsEl.innerHTML = `
+      <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);margin-bottom:8px;">Estado actual</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        <div><span style="font-size:1.3rem;font-weight:800;color:var(--accent);">${stats.props}</span><div style="font-size:0.75rem;color:var(--text3);">Propiedades</div></div>
+        <div><span style="font-size:1.3rem;font-weight:800;color:var(--green);">${stats.pagos}</span><div style="font-size:0.75rem;color:var(--text3);">Pagos</div></div>
+        <div><span style="font-size:1.3rem;font-weight:800;color:var(--red);">${stats.gastos}</span><div style="font-size:0.75rem;color:var(--text3);">Gastos</div></div>
+        <div style="margin-left:auto;text-align:right;"><div style="font-size:0.75rem;color:var(--text3);">Último backup</div><div id="backup-last-ts" style="font-size:0.82rem;font-weight:600;color:${hist.length>0?'var(--green)':'var(--yellow)'};">${lastTs}</div></div>
+      </div>`;
+  }
+
+  renderBackupHistory();
+}
+
+function closeBackupPanel() {
+  const panel = document.getElementById('backup-panel-overlay');
+  if (panel) panel.style.display = 'none';
 }
 
 /* ═══════════════════════════════════════════════
