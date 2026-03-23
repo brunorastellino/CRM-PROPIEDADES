@@ -1044,10 +1044,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <!-- Selector año contractual (solo visible en modo aniocontrato) -->
         <div id="table-aniocontrato-selector" style="display:none;align-items:center;gap:6px;">
           <span style="font-size:0.78rem;color:var(--text3);font-weight:600;">Año:</span>
-          <select id="table-anio-num" onchange="renderAllPropsTable()" style="padding:5px 10px;border:1.5px solid var(--border2);border-radius:8px;font-family:inherit;font-size:0.82rem;background:var(--surface);color:var(--text);font-weight:600;cursor:pointer;">
-            <option value="1">Año 1</option>
-            <option value="2">Año 2</option>
-            <option value="3">Año 3</option>
+          <select id="table-anio-num" onchange="setTableMode('aniocontrato')" style="padding:5px 10px;border:1.5px solid var(--border2);border-radius:8px;font-family:inherit;font-size:0.82rem;background:var(--surface);color:var(--text);font-weight:600;cursor:pointer;">
           </select>
         </div>
       </div>
@@ -1110,11 +1107,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <!-- Selector de año contractual (solo visible en modo aniocontrato) -->
         <div id="rch-aniocontrato-selector" style="display:none;align-items:center;gap:6px;">
           <span style="font-size:0.78rem;color:var(--text3);font-weight:600;">Año contrato:</span>
-          <select id="rch-anio-num" onchange="renderRentChart()" style="padding:6px 10px;border:1.5px solid var(--border2);border-radius:8px;font-family:inherit;font-size:0.82rem;background:var(--surface);color:var(--text);font-weight:600;cursor:pointer;">
-            <option value="1">Año 1</option>
-            <option value="2">Año 2</option>
-            <option value="3">Año 3</option>
-          </select>
+          <select id="rch-anio-num" onchange="renderRentChart()" style="padding:6px 10px;border:1.5px solid var(--border2);border-radius:8px;font-family:inherit;font-size:0.82rem;background:var(--surface);color:var(--text);font-weight:600;cursor:pointer;"></select>
         </div>
       </div>
 
@@ -1224,11 +1217,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <!-- Selector año contractual (solo modo aniocontrato) -->
         <div id="cc-aniocontrato-selector" style="display:none;align-items:center;gap:6px;">
           <span style="font-size:0.82rem;color:var(--text3);font-weight:600;">Año:</span>
-          <select id="cc-anio-num" onchange="renderCentroComputos()" style="padding:8px 14px;border:1.5px solid var(--border2);border-radius:var(--radius2);font-size:0.9rem;font-weight:600;background:var(--surface);">
-            <option value="1">Año 1</option>
-            <option value="2">Año 2</option>
-            <option value="3">Año 3</option>
-          </select>
+          <select id="cc-anio-num" onchange="renderCentroComputos()" style="padding:8px 14px;border:1.5px solid var(--border2);border-radius:var(--radius2);font-size:0.9rem;font-weight:600;background:var(--surface);"></select>
         </div>
         <button class="btn btn-ghost" onclick="showDashboard()">← Volver</button>
       </div>
@@ -1455,11 +1444,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
           <!-- Selector año contractual (visible en modo aniocontrato) -->
           <div id="rent-aniocontrato-selector" style="display:none;align-items:center;gap:6px;">
             <span style="font-size:0.78rem;color:var(--text3);font-weight:600;">Año:</span>
-            <select id="rent-anio-num" onchange="renderRentabilidad()" style="padding:5px 10px;border:1.5px solid var(--border2);border-radius:8px;font-family:inherit;font-size:0.82rem;background:var(--surface);color:var(--text);font-weight:600;cursor:pointer;">
-              <option value="1">Año 1</option>
-              <option value="2">Año 2</option>
-              <option value="3">Año 3</option>
-            </select>
+            <select id="rent-anio-num" onchange="renderRentabilidad()" style="padding:5px 10px;border:1.5px solid var(--border2);border-radius:8px;font-family:inherit;font-size:0.82rem;background:var(--surface);color:var(--text);font-weight:600;cursor:pointer;"></select>
           </div>
           <span id="rent-mode-label" style="font-size:0.78rem;color:var(--text3);"></span>
         </div>
@@ -2718,6 +2703,7 @@ function setCCMode(mode) {
   } else if (mode === 'aniocontrato') {
     if (btnAnioC) { btnAnioC.style.background = 'var(--accent)'; btnAnioC.style.color = '#fff'; }
     if (acSel) acSel.style.display = 'flex';
+    populatePortfolioSelector('cc-anio-num');
   } else {
     btnCon.style.background = 'var(--accent)'; btnCon.style.color = '#fff';
   }
@@ -4531,11 +4517,13 @@ function setTableMode(mode) {
   } else if (mode === 'aniocontrato') {
     if (btnAnioC) { btnAnioC.style.background = 'var(--accent)'; btnAnioC.style.color = '#fff'; }
     if (acSel) acSel.style.display = 'flex';
+    populatePortfolioSelector('table-anio-num');
     const anioNum = parseInt(document.getElementById('table-anio-num')?.value || 1);
-    if (lbl) lbl.textContent = 'Mostrando: año ' + anioNum + ' contractual de cada propiedad';
-    if (thCob)   thCob.textContent   = 'Cobrado año ' + anioNum;
-    if (thBruta) thBruta.textContent = 'Rent. Bruta año ' + anioNum;
-    if (thNeta)  thNeta.textContent  = 'Rent. Neta año ' + anioNum;
+    const selText = document.getElementById('table-anio-num')?.options[document.getElementById('table-anio-num')?.selectedIndex]?.textContent || '';
+    if (lbl) lbl.textContent = 'Mostrando: ' + selText;
+    if (thCob)   thCob.textContent   = 'Cobrado ' + selText;
+    if (thBruta) thBruta.textContent = 'Rent. Bruta';
+    if (thNeta)  thNeta.textContent  = 'Rent. Neta';
     if (thProy)  thProy.textContent  = 'Rent. Anual Proyectada';
   } else {
     if (btnCon) { btnCon.style.background = 'var(--accent)'; btnCon.style.color = '#fff'; }
@@ -4698,7 +4686,11 @@ function setRentChartMode(mode) {
   if (yrSel) yrSel.style.display = 'none';
   if (acSel) acSel.style.display = 'none';
   if (mode === 'anio' && btnA)  { btnA.style.background='var(--accent)';  btnA.style.color='#fff'; if(yrSel) yrSel.style.display=''; }
-  if (mode === 'aniocontrato' && btnAC) { btnAC.style.background='var(--accent)'; btnAC.style.color='#fff'; if(acSel) acSel.style.display='flex'; }
+  if (mode === 'aniocontrato' && btnAC) {
+    btnAC.style.background='var(--accent)'; btnAC.style.color='#fff';
+    if(acSel) acSel.style.display='flex';
+    populatePortfolioSelector('rch-anio-num');
+  }
   if (mode === 'contrato' && btnC) { btnC.style.background='var(--accent)'; btnC.style.color='#fff'; }
   renderRentChart();
 }
@@ -5419,15 +5411,20 @@ function loadPropertyDetail(propId) {
   if (btnCon) { btnCon.style.background = 'var(--surface)'; btnCon.style.color = 'var(--text2)'; }
   if (wrap)   wrap.style.display = '';
   if (lbl)    lbl.textContent = 'Mostrando: año ' + new Date().getFullYear();
-  // Inicializar botones de rentabilidad
-  const rBtnCal = document.getElementById('rent-toggle-calendario');
-  const rBtnCon = document.getElementById('rent-toggle-contrato');
-  const rWrap   = document.getElementById('rent-year-selector-wrap');
-  const rLbl    = document.getElementById('rent-mode-label');
-  if (rBtnCal) { rBtnCal.style.background = 'var(--accent)'; rBtnCal.style.color = '#fff'; }
-  if (rBtnCon) { rBtnCon.style.background = 'var(--surface)'; rBtnCon.style.color = 'var(--text2)'; }
-  if (rWrap)   rWrap.style.display = '';
-  if (rLbl)    rLbl.textContent = 'Mostrando: año ' + new Date().getFullYear();
+  // Inicializar botones de rentabilidad — reset a calendario
+  const rBtnCal  = document.getElementById('rent-toggle-calendario');
+  const rBtnAnioC= document.getElementById('rent-toggle-aniocontrato');
+  const rBtnCon  = document.getElementById('rent-toggle-contrato');
+  const rWrap    = document.getElementById('rent-year-selector-wrap');
+  const rACSel   = document.getElementById('rent-aniocontrato-selector');
+  const rLbl     = document.getElementById('rent-mode-label');
+  [rBtnCal, rBtnAnioC, rBtnCon].forEach(b => { if(b){ b.style.background='var(--surface)'; b.style.color='var(--text2)'; }});
+  if (rBtnCal)  { rBtnCal.style.background = 'var(--accent)'; rBtnCal.style.color = '#fff'; }
+  if (rWrap)    rWrap.style.display = '';
+  if (rACSel)   rACSel.style.display = 'none';
+  if (rLbl)     rLbl.textContent = 'Mostrando: año ' + new Date().getFullYear();
+  // Pre-populate the aniocontrato selector for this property
+  populateSinglePropSelector('rent-anio-num', id);
   renderDocs();
   renderNotes();
   renderExpensasHistorial();
@@ -5498,7 +5495,10 @@ function switchTab(tab) {
   if (tab === 'expensas') renderExpensasHistorial();
   if (tab === 'documentos') renderDocs();
   if (tab === 'historial') renderNotes();
-  if (tab === 'rentabilidad') renderRentabilidad();
+  if (tab === 'rentabilidad') {
+    if (rentMode === 'aniocontrato') populateSinglePropSelector('rent-anio-num', currentPropId);
+    renderRentabilidad();
+  }
 }
 
 /* ═══════════════════════════════════════════════
@@ -6244,6 +6244,72 @@ function calcRentDesdeInicio(propId) {
   };
 }
 
+/* ═══════════════════════════════════════════════
+   HELPER: Poblar selectores de año contractual con fechas reales
+═══════════════════════════════════════════════ */
+
+// Para una sola propiedad (tab Rentabilidad individual)
+function populateSinglePropSelector(selId, propId, currentVal) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const ri = calcRentDesdeInicio(propId);
+  const prevVal = currentVal || parseInt(sel.value) || 1;
+  sel.innerHTML = '';
+  if (!ri || ri.aniosContrato.length === 0) {
+    sel.innerHTML = '<option value="1">Sin contrato</option>';
+    return;
+  }
+  ri.aniosContrato.forEach(ac => {
+    const o = document.createElement('option');
+    o.value = ac.anioNum;
+    const estadoStr = ac.cerrado ? '✓' : '⏳';
+    o.textContent = ac.rangoLabel + ' ' + estadoStr;
+    if (ac.anioNum === prevVal) o.selected = true;
+    sel.appendChild(o);
+  });
+  // Default: último año (en curso)
+  if (!sel.value || sel.value === '0') sel.value = ri.aniosContrato[ri.aniosContrato.length - 1].anioNum;
+}
+
+// Para el portfolio global (dashboard / gráfico) — muestra todos los años posibles del portfolio
+function populatePortfolioSelector(selId, currentVal) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const prevVal = currentVal || parseInt(sel.value) || 1;
+  const props = getProperties();
+
+  // Recolectar máximo de años que tiene cualquier propiedad
+  let maxAnios = 0;
+  // También recolectar rangos representativos (del primer prop que tenga ese año)
+  const rangosPorAnio = {};
+  Object.entries(props).forEach(([id, p]) => {
+    if (!p.inicio) return;
+    const ri = calcRentDesdeInicio(id);
+    if (!ri) return;
+    ri.aniosContrato.forEach(ac => {
+      if (ac.anioNum > maxAnios) maxAnios = ac.anioNum;
+      if (!rangosPorAnio[ac.anioNum]) rangosPorAnio[ac.anioNum] = { rangoLabel: ac.rangoLabel, cerrado: ac.cerrado };
+    });
+  });
+
+  sel.innerHTML = '';
+  if (maxAnios === 0) {
+    sel.innerHTML = '<option value="1">Sin contratos</option>';
+    return;
+  }
+  for (let n = 1; n <= maxAnios; n++) {
+    const o = document.createElement('option');
+    o.value = n;
+    const info = rangosPorAnio[n];
+    const estadoStr = info ? (info.cerrado ? ' ✓' : ' ⏳') : '';
+    o.textContent = 'Año ' + n + (info ? ': ' + info.rangoLabel + estadoStr : '');
+    if (n === prevVal) o.selected = true;
+    sel.appendChild(o);
+  }
+  // Default: mayor año disponible (el en curso)
+  if (!sel.value || parseInt(sel.value) > maxAnios) sel.value = maxAnios;
+}
+
 var rentMode = 'calendario'; // 'calendario' | 'contrato' | 'aniocontrato'
 
 function setRentMode(mode) {
@@ -6267,8 +6333,9 @@ function setRentMode(mode) {
   } else if (mode === 'aniocontrato') {
     if (btnAnioC) { btnAnioC.style.background = 'var(--accent)'; btnAnioC.style.color = '#fff'; }
     if (acSel) acSel.style.display = 'flex';
+    populateSinglePropSelector('rent-anio-num', currentPropId);
     const anioNum = parseInt(document.getElementById('rent-anio-num')?.value || 1);
-    if (lbl) lbl.textContent = 'Mostrando: año ' + anioNum + ' del contrato';
+    if (lbl) lbl.textContent = 'Mostrando: ' + (document.getElementById('rent-anio-num')?.options[document.getElementById('rent-anio-num')?.selectedIndex]?.textContent || 'año del contrato');
   } else {
     if (btnCon) { btnCon.style.background = 'var(--accent)'; btnCon.style.color = '#fff'; }
     const p = getPropData(currentPropId);
