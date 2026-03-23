@@ -5663,6 +5663,21 @@ function calcRentDesdeInicio(propId) {
   const esParaguay = (p.pais || '').toLowerCase().includes('paraguay');
   const monedaLocal = esParaguay ? 'PYG' : (p.moneda || 'ARS');
 
+  // Tablas TC de referencia (fallback cuando el pago no tiene TC, ej: Holmberg paga en USD)
+  const TC_ARS_REF = {
+    2024:[1200,1150,1000,1040,1200,1300,1350,1300,1250,1200,1150,1100],
+    2025:[1150,1200,1250,1300,1320,1350,1380,1420,1480,1520,1550,1500],
+    2026:[1450,1405,1390,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+  };
+  const TC_PYG_REF = {
+    2024:[7300,7350,7400,7450,7500,7550,7600,7650,7700,7750,7800,7900],
+    2025:[7300,7250,7200,7150,7100,7050,7000,7050,7100,6950,6800,6500],
+    2026:[6500,6450,6520,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+  };
+  function getRefTC(yr, mi) {
+    return ((esParaguay ? TC_PYG_REF : TC_ARS_REF)[yr] || [])[mi] || 0;
+  }
+
   // Rango de años a recorrer
   const primerAnio = inicioDate.getFullYear();
   const anioHoy    = hoy.getFullYear();
@@ -5672,7 +5687,7 @@ function calcRentDesdeInicio(propId) {
 
   for (let yr = primerAnio; yr <= anioHoy; yr++) {
     const pays = getPayments(propId, yr);
-    // TC promedio del año
+    // TC promedio del año (de pagos que sí tienen TC)
     let tcS = 0, tcC = 0;
     for (let mi = 0; mi < 12; mi++) {
       const t = parseNum((pays[mi] || {}).tc);
@@ -5692,11 +5707,13 @@ function calcRentDesdeInicio(propId) {
       const mpago    = m.monedaPago || monedaLocal;
       const estado   = m.estado || 'pendiente';
 
+      // TC efectivo: del pago → promedio anual → tabla de referencia
+      const tcEfectivo = tc > 0 ? tc : (tcProm > 0 ? tcProm : getRefTC(yr, mi));
+
       let ingUSD = 0;
       if (monto > 0 && estado === 'pagado') {
         if (mpago === 'USD') ingUSD = monto;
-        else if (tc > 0)     ingUSD = Math.round(monto / tc);
-        else if (tcProm > 0) ingUSD = Math.round(monto / tcProm);
+        else if (tcEfectivo > 0) ingUSD = Math.round(monto / tcEfectivo);
       }
 
       const gastosMes = getGastosMes(propId, yr, mi);
@@ -5704,9 +5721,8 @@ function calcRentDesdeInicio(propId) {
       gastosMes.forEach(g => {
         const v = parseNum(g.monto);
         const cur = g.moneda || monedaLocal;
-        if (cur === 'USD')      gasUSD += v;
-        else if (tc > 0)        gasUSD += Math.round(v / tc);
-        else if (tcProm > 0)    gasUSD += Math.round(v / tcProm);
+        if (cur === 'USD')           gasUSD += v;
+        else if (tcEfectivo > 0)     gasUSD += Math.round(v / tcEfectivo);
       });
 
       totalIngUSD += ingUSD;
@@ -5885,7 +5901,25 @@ function _renderRentabilidadAnual() {
   }
   const tcPromAnio = tcCountAnio > 0 ? tcSumAnio / tcCountAnio : 0;
 
-  // ── Detalle por mes ──
+  // ── TC de referencia por si el pago no tiene TC (ej: Holmberg paga en USD) ──
+  const TC_ARS_REF = {
+    2024:[1200,1150,1000,1040,1200,1300,1350,1300,1250,1200,1150,1100],
+    2025:[1150,1200,1250,1300,1320,1350,1380,1420,1480,1520,1550,1500],
+    2026:[1450,1405,1390,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+  };
+  const TC_PYG_REF = {
+    2024:[7300,7350,7400,7450,7500,7550,7600,7650,7700,7750,7800,7900],
+    2025:[7300,7250,7200,7150,7100,7050,7000,7050,7100,6950,6800,6500],
+    2026:[6500,6450,6520,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+  };
+  function getTCForMonth(mi) {
+    const tcPay = parseNum((pays[mi] || {}).tc);
+    if (tcPay > 0) return tcPay;
+    if (tcPromAnio > 0) return tcPromAnio;
+    // Fallback: tabla de referencia según país
+    const tbl = esParaguay ? TC_PYG_REF : TC_ARS_REF;
+    return (tbl[year] || [])[mi] || 0;
+  }
   let totalIngresosUSD = 0;
   let totalGastosUSD   = 0;
 
@@ -5914,13 +5948,13 @@ function _renderRentabilidadAnual() {
 
     // ── Gastos del mes en USD ──
     const gastosMes = getGastosMes(currentPropId, year, i);
+    const tcMesRef = getTCForMonth(i);
     let gastoMesUSD = 0;
     gastosMes.forEach(g => {
       const v = parseNum(g.monto);
       const cur = g.moneda || monedaLocalNombre;
       if (cur === 'USD') { gastoMesUSD += v; }
-      else if (tc > 0)   { gastoMesUSD += Math.round(v / tc); }
-      else if (tcPromAnio > 0) { gastoMesUSD += Math.round(v / tcPromAnio); }
+      else if (tcMesRef > 0) { gastoMesUSD += Math.round(v / tcMesRef); }
     });
     totalGastosUSD += gastoMesUSD;
 
