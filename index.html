@@ -1025,16 +1025,22 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         </select>
       </div>
       <!-- Toggle vista anual -->
-      <div style="display:flex;align-items:center;gap:0;margin-top:18px;margin-bottom:2px;">
-        <button id="toggle-anio-calendario" onclick="setTableMode('calendario')"
-          style="padding:7px 18px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;border-radius:8px 0 0 8px;background:var(--accent);color:#fff;cursor:pointer;transition:all 0.15s;font-family:inherit;">
-          📅 Año en curso
-        </button>
-        <button id="toggle-anio-contrato" onclick="setTableMode('contrato')"
-          style="padding:7px 18px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-radius:0 8px 8px 0;background:var(--surface);color:var(--text2);cursor:pointer;transition:all 0.15s;font-family:inherit;">
-          📋 Desde inicio de contrato
-        </button>
-        <span id="table-mode-label" style="margin-left:14px;font-size:0.78rem;color:var(--text3);"></span>
+      <div style="display:flex;align-items:center;gap:0;margin-top:18px;margin-bottom:2px;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;">
+          <button id="toggle-anio-calendario" onclick="setTableMode('calendario')"
+            style="padding:7px 18px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;border-radius:8px 0 0 8px;background:var(--accent);color:#fff;cursor:pointer;transition:all 0.15s;font-family:inherit;">
+            📅 Año en curso
+          </button>
+          <button id="toggle-anio-aniocontrato" onclick="setTableMode('aniocontrato')"
+            style="padding:7px 18px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;background:var(--surface);color:var(--text2);cursor:pointer;transition:all 0.15s;font-family:inherit;">
+            📆 Año contractual
+          </button>
+          <button id="toggle-anio-contrato" onclick="setTableMode('contrato')"
+            style="padding:7px 18px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-radius:0 8px 8px 0;background:var(--surface);color:var(--text2);cursor:pointer;transition:all 0.15s;font-family:inherit;">
+            📋 Desde inicio de contrato
+          </button>
+        </div>
+        <span id="table-mode-label" style="font-size:0.78rem;color:var(--text3);"></span>
       </div>
 
       <div class="all-props-table-wrap" style="margin-top:10px;">
@@ -4432,6 +4438,7 @@ var tableMode = 'calendario'; // 'calendario' | 'contrato'
 function setTableMode(mode) {
   tableMode = mode;
   const btnCal  = document.getElementById('toggle-anio-calendario');
+  const btnAnioC= document.getElementById('toggle-anio-aniocontrato');
   const btnCon  = document.getElementById('toggle-anio-contrato');
   const lbl     = document.getElementById('table-mode-label');
   const thCob   = document.getElementById('th-cobrado-label');
@@ -4440,21 +4447,30 @@ function setTableMode(mode) {
   const thProy  = document.getElementById('th-rent-proyectada');
   const now     = new Date();
   const mesNombreActual = MESES[now.getMonth()];
+
+  // Reset all buttons
+  [btnCal, btnAnioC, btnCon].forEach(b => { if(b){ b.style.background='var(--surface)'; b.style.color='var(--text2)'; } });
+
   if (mode === 'calendario') {
-    btnCal.style.background = 'var(--accent)'; btnCal.style.color = '#fff';
-    btnCon.style.background = 'var(--surface)'; btnCon.style.color = 'var(--text2)';
+    if (btnCal) { btnCal.style.background = 'var(--accent)'; btnCal.style.color = '#fff'; }
     if (lbl) lbl.textContent = 'Mostrando: enero – hoy ' + now.getFullYear();
     if (thCob)   thCob.textContent   = 'Cobrado ' + now.getFullYear();
     if (thBruta) thBruta.textContent = 'Rent. Bruta a hoy (' + mesNombreActual + ')';
     if (thNeta)  thNeta.textContent  = 'Rent. Neta a hoy (' + mesNombreActual + ')';
     if (thProy)  thProy.textContent  = 'Rent. Anual Proyectada';
+  } else if (mode === 'aniocontrato') {
+    if (btnAnioC) { btnAnioC.style.background = 'var(--accent)'; btnAnioC.style.color = '#fff'; }
+    if (lbl) lbl.textContent = 'Mostrando: año contractual en curso de cada propiedad';
+    if (thCob)   thCob.textContent   = 'Cobrado año contractual';
+    if (thBruta) thBruta.textContent = 'Rent. Bruta año contractual';
+    if (thNeta)  thNeta.textContent  = 'Rent. Neta año contractual';
+    if (thProy)  thProy.textContent  = 'Rent. Anual Proyectada';
   } else {
-    btnCon.style.background = 'var(--accent)'; btnCon.style.color = '#fff';
-    btnCal.style.background = 'var(--surface)'; btnCal.style.color = 'var(--text2)';
+    if (btnCon) { btnCon.style.background = 'var(--accent)'; btnCon.style.color = '#fff'; }
     if (lbl) lbl.textContent = 'Mostrando: inicio de contrato → hoy';
     if (thCob)   thCob.textContent   = 'Cobrado (desde contrato)';
-    if (thBruta) thBruta.textContent = 'Rent. Bruta a hoy (' + mesNombreActual + ')';
-    if (thNeta)  thNeta.textContent  = 'Rent. Neta a hoy (' + mesNombreActual + ')';
+    if (thBruta) thBruta.textContent = 'Rent. Bruta desde contrato';
+    if (thNeta)  thNeta.textContent  = 'Rent. Neta desde contrato';
     if (thProy)  thProy.textContent  = 'Rent. Anual Proyectada';
   }
   renderAllPropsTable();
@@ -4993,7 +5009,7 @@ function renderAllPropsTable() {
     let cobradoAcumStr, rentBrutaStr, rentNetaStr;
 
     if (tableMode === 'contrato') {
-      // ── MODO CONTRATO: desde inicio de contrato ──
+      // ── MODO CONTRATO: desde inicio de contrato (total acumulado) ──
       const ri = calcRentDesdeInicio(id);
       if (ri && ri.rows.length > 0) {
         const mesesLabel = ri.mesesContrato + ' mes' + (ri.mesesContrato !== 1 ? 'es' : '');
@@ -5002,17 +5018,46 @@ function renderAllPropsTable() {
           '<br><span style="font-size:0.72rem;color:var(--text3);">' + mesesLabel + ' · desde ' + formatDate(p.inicio) + '</span>';
 
         if (ri.totalIngUSD > 0 && valorUSD > 0 && ri.mesesContrato > 0) {
-          // Anualizado: promedio mensual × 12
           const pctB = Math.round((ri.totalIngUSD / ri.mesesContrato * 12) / valorUSD * 100);
           rentBrutaStr = '<span style="font-size:1.35rem;font-weight:800;color:var(--accent);letter-spacing:-0.01em;">' + pctB + '%</span>' +
             '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">anual · USD ' + Math.round(ri.totalIngUSD).toLocaleString('es-AR') + '</span>';
-
           const pctN = Math.round((ri.netoUSD / ri.mesesContrato * 12) / valorUSD * 100);
           const colorN = pctN >= 0 ? 'var(--green)' : 'var(--red)';
           const gasDisp = ri.totalGasUSD > 0
             ? '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">−USD ' + Math.round(ri.totalGasUSD).toLocaleString('es-AR') + ' gastos</span>'
             : '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">sin gastos</span>';
           rentNetaStr = '<span style="font-size:1.35rem;font-weight:800;color:' + colorN + ';letter-spacing:-0.01em;">' + pctN + '%</span>' + gasDisp;
+        } else {
+          rentBrutaStr = '<span style="color:var(--text3);">—</span>';
+          rentNetaStr  = '<span style="color:var(--text3);">—</span>';
+        }
+      } else {
+        cobradoAcumStr = '<span style="color:var(--text3);font-size:0.8rem;">Sin inicio de contrato</span>';
+        rentBrutaStr   = '<span style="color:var(--text3);">—</span>';
+        rentNetaStr    = '<span style="color:var(--text3);">—</span>';
+      }
+
+    } else if (tableMode === 'aniocontrato') {
+      // ── MODO AÑO CONTRACTUAL: solo el año en curso del contrato ──
+      const ri = calcRentDesdeInicio(id);
+      if (ri && ri.aniosContrato.length > 0) {
+        const ac = ri.aniosContrato[ri.aniosContrato.length - 1]; // año en curso
+        const estadoBadgeAC = ac.cerrado
+          ? '<span style="background:var(--accent-light);color:var(--accent);border-radius:10px;padding:1px 7px;font-size:0.68rem;font-weight:700;">Año ' + ac.anioNum + ' ✓</span>'
+          : '<span style="background:var(--yellow-light);color:var(--yellow);border-radius:10px;padding:1px 7px;font-size:0.68rem;font-weight:700;">Año ' + ac.anioNum + ' ⏳</span>';
+        cobradoAcumStr =
+          '<span style="font-weight:700;color:var(--green);">USD ' + Math.round(ac.ingUSD).toLocaleString('es-AR') + '</span>' +
+          '<br>' + estadoBadgeAC + ' <span style="font-size:0.7rem;color:var(--text3);">' + ac.rangoLabel + '</span>' +
+          '<br><span style="font-size:0.7rem;color:var(--text3);">' + ac.mesesCobrados + '/' + ac.mesesTotal + ' meses cobrados</span>';
+
+        if (ac.rentBruta !== null && valorUSD > 0) {
+          rentBrutaStr = '<span style="font-size:1.35rem;font-weight:800;color:var(--accent);letter-spacing:-0.01em;">' + Math.round(ac.rentBruta) + '%</span>' +
+            '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">anual año ' + ac.anioNum + '</span>';
+          const colorN = ac.rentNeta !== null && ac.rentNeta >= 0 ? 'var(--green)' : 'var(--red)';
+          const gasDispAC = ac.gasUSD > 0
+            ? '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">−USD ' + Math.round(ac.gasUSD).toLocaleString('es-AR') + ' gastos</span>'
+            : '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">sin gastos</span>';
+          rentNetaStr = '<span style="font-size:1.35rem;font-weight:800;color:' + colorN + ';letter-spacing:-0.01em;">' + (ac.rentNeta !== null ? Math.round(ac.rentNeta) + '%' : '—') + '</span>' + gasDispAC;
         } else {
           rentBrutaStr = '<span style="color:var(--text3);">—</span>';
           rentNetaStr  = '<span style="color:var(--text3);">—</span>';
@@ -5105,7 +5150,9 @@ function renderAllPropsTable() {
       '<td><button class="link-btn" onclick="goToProperty(\'' + id + '\')" style="font-weight:600;font-size:1rem;text-align:left">' + p.nombre + '</button><br>' +
         (tableMode === 'contrato' && p.inicio
           ? '<span style="font-size:0.78rem;color:var(--accent);font-weight:600;">📋 Inicio: ' + formatDate(p.inicio) + '</span>'
-          : '<span style="font-size:0.78rem;color:var(--text3)">' + p.direccion + '</span>') + '</td>' +
+          : tableMode === 'aniocontrato' && p.inicio
+            ? (() => { const ri=calcRentDesdeInicio(id); const ac=ri&&ri.aniosContrato.length>0?ri.aniosContrato[ri.aniosContrato.length-1]:null; return ac?'<span style="font-size:0.78rem;color:var(--accent);font-weight:600;">📆 '+ac.rangoLabel+'</span>':'<span style="font-size:0.78rem;color:var(--text3)">'+p.direccion+'</span>'; })()
+            : '<span style="font-size:0.78rem;color:var(--text3)">' + p.direccion + '</span>') + '</td>' +
       '<td class="col-hide-mobile">' + (p.pais === 'Argentina' ? '🇦🇷' : '🇵🇾') + ' ' + p.pais + '</td>' +
       '<td>' + (p.inquilino || '<span style="color:var(--text3)">—</span>') + '</td>' +
       '<td>' + estadoBadge + '</td>' +
