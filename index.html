@@ -6,6 +6,7 @@
 <title>CRM Administración de Alquileres</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════
    VARIABLES & RESET
@@ -1046,9 +1047,9 @@ textarea.form-control { resize: vertical; min-height: 80px; }
               <th>Estado</th>
               <th id="th-mes-actual">Pago mes actual</th>
               <th id="th-cobrado-label" class="col-hide-mobile">Cobrado acumulado</th>
-              <th id="th-rent-bruta-label" class="col-hide-mobile">Rent. Bruta a hoy</th>
-              <th id="th-rent-neta-label" class="col-hide-mobile">Rent. Neta a hoy</th>
-              <th id="th-rent-proyectada" class="col-hide-mobile">Rent. Anual Proyectada</th>
+              <th id="th-rent-bruta-label" class="col-hide-mobile">Rent. Bruta Anual</th>
+              <th id="th-rent-neta-label" class="col-hide-mobile">Rent. Neta Anual</th>
+              <th id="th-rent-proyectada" class="col-hide-mobile">Rent. Proyectada</th>
               <th class="col-hide-mobile">Valor Propiedad</th>
               <th></th>
             </tr>
@@ -1058,7 +1059,48 @@ textarea.form-control { resize: vertical; min-height: 80px; }
       </div>
     </div>
 
-    <!-- Países -->
+    <!-- Gráfico Rentabilidad -->
+    <div id="dash-rent-chart-card" class="card mb-2" style="margin-bottom:24px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
+        <div>
+          <h3 style="font-family:'Playfair Display',serif;font-weight:400;font-size:1.1rem;">📈 Rentabilidad Real vs. Estimada por Contrato</h3>
+          <p style="font-size:0.78rem;color:var(--text3);margin-top:2px;">Comparativa mensual en USD · % sobre valor de la propiedad</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <select id="rent-chart-tipo" onchange="renderRentChart()" style="padding:6px 10px;border:1.5px solid var(--border2);border-radius:8px;font-family:inherit;font-size:0.82rem;background:var(--surface);color:var(--text);font-weight:600;cursor:pointer;">
+            <option value="neta">Rent. Neta (ingresos − gastos)</option>
+            <option value="bruta">Rent. Bruta (solo ingresos)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Modo: Año en curso / Desde contrato -->
+      <div style="display:flex;align-items:center;gap:0;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;">
+          <button id="rch-btn-anio" onclick="setRentChartMode('anio')"
+            style="padding:7px 16px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;border-radius:8px 0 0 8px;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            📅 Año en curso
+          </button>
+          <button id="rch-btn-contrato" onclick="setRentChartMode('contrato')"
+            style="padding:7px 16px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-radius:0 8px 8px 0;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            📋 Desde inicio de contrato
+          </button>
+        </div>
+        <!-- Selector de año (solo visible en modo año) -->
+        <select id="rent-chart-year" onchange="renderRentChart()" style="padding:6px 10px;border:1.5px solid var(--border2);border-radius:8px;font-family:inherit;font-size:0.82rem;background:var(--surface);color:var(--text);font-weight:600;cursor:pointer;"></select>
+      </div>
+
+      <!-- Toggles de propiedades -->
+      <div id="rent-chart-toggles" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
+
+      <!-- Canvas -->
+      <div style="position:relative;width:100%;height:340px;">
+        <canvas id="rent-chart-canvas"></canvas>
+      </div>
+      <!-- Leyenda custom -->
+      <div id="rent-chart-legend" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;justify-content:center;"></div>
+    </div>
+
     <h3 style="font-family:'Playfair Display',serif; font-weight:400; font-size:1.25rem; margin-bottom:16px;">Acceso por País</h3>
     <div class="country-grid">
       <div class="country-card" onclick="showCountry('Argentina')">
@@ -4355,6 +4397,316 @@ function renderDashboard() {
   setTableMode(tableMode);
   // Preview en pozo
   renderDashPozoPreview();
+  // Gráfico rentabilidad
+  renderRentChart();
+}
+
+/* ═══════════════════════════════════════════════
+   GRÁFICO RENTABILIDAD DASHBOARD
+═══════════════════════════════════════════════ */
+let _rentChartInstance  = null;
+let _rentChartMode      = 'anio'; // 'anio' | 'contrato'
+let _rentChartActiveProps = {};
+
+const RENT_CHART_COLORS = {
+  'irigoyen':     { real: '#1a3a6b', est: '#7a9fd4' },
+  'holmer':       { real: '#2e7d52', est: '#8ecfab' },
+  'phmelo':       { real: '#b35c00', est: '#f0b87a' },
+  'lovemolas':    { real: '#7b2d8b', est: '#c98bd4' },
+  'grandchelsea': { real: '#c0392b', est: '#f0908a' },
+  'TOTAL':        { real: '#1a1814', est: '#9b9590' },
+};
+const PROP_LABELS = {
+  'irigoyen':     'Yrigoyen',
+  'holmer':       'Holmberg',
+  'phmelo':       'PH Melo',
+  'lovemolas':    'Molas Tower',
+  'grandchelsea': 'Grand Chelsea',
+  'TOTAL':        'TOTAL Portfolio',
+};
+
+// TC de referencia (coincide con el seed)
+const _RC_TC_ARS = {
+  2024:[1200,1150,1000,1040,1200,1300,1350,1300,1250,1200,1150,1100],
+  2025:[1150,1200,1250,1300,1320,1350,1380,1420,1480,1520,1550,1500],
+  2026:[1450,1405,1390,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+};
+const _RC_TC_PYG = {
+  2024:[7300,7350,7400,7450,7500,7550,7600,7650,7700,7750,7800,7900],
+  2025:[7300,7250,7200,7150,7100,7050,7000,7050,7100,6950,6800,6500],
+  2026:[6500,6450,6520,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+};
+
+function _rcGetTC(propId, yr, mi) {
+  const pays  = getPayments(propId, yr);
+  const tcPay = parseNum((pays[mi] || {}).tc);
+  if (tcPay > 0) return tcPay;
+  const p = getProperties()[propId] || {};
+  const esParaguay = (p.pais||'').toLowerCase().includes('paraguay');
+  return ((esParaguay ? _RC_TC_PYG : _RC_TC_ARS)[yr] || [])[mi] || 0;
+}
+function _rcToUSD(val, moneda, tc) {
+  if (!val || val <= 0) return 0;
+  if (moneda === 'USD') return val;
+  return tc > 0 ? val / tc : 0;
+}
+
+function setRentChartMode(mode) {
+  _rentChartMode = mode;
+  const btnA = document.getElementById('rch-btn-anio');
+  const btnC = document.getElementById('rch-btn-contrato');
+  const yrSel = document.getElementById('rent-chart-year');
+  if (btnA) { btnA.style.background = mode==='anio' ? 'var(--accent)' : 'var(--surface)'; btnA.style.color = mode==='anio' ? '#fff' : 'var(--text2)'; }
+  if (btnC) { btnC.style.background = mode==='contrato' ? 'var(--accent)' : 'var(--surface)'; btnC.style.color = mode==='contrato' ? '#fff' : 'var(--text2)'; }
+  if (yrSel) yrSel.style.display = mode === 'anio' ? '' : 'none';
+  renderRentChart();
+}
+
+function initRentChartToggles() {
+  const propIds = Object.keys(VALORES_PROPIEDAD_USD);
+  if (Object.keys(_rentChartActiveProps).length === 0) {
+    propIds.forEach(id => { _rentChartActiveProps[id] = true; });
+    _rentChartActiveProps['TOTAL'] = true;
+  }
+  const container = document.getElementById('rent-chart-toggles');
+  if (!container) return;
+  container.innerHTML = [...propIds, 'TOTAL'].map(id => {
+    const col    = (RENT_CHART_COLORS[id] || {}).real || '#888';
+    const active = _rentChartActiveProps[id];
+    const label  = PROP_LABELS[id] || id;
+    return `<button onclick="toggleRentChartProp('${id}')"
+      style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;
+             border:2px solid ${col};${id==='TOTAL'?'border-style:dashed;':''}
+             background:${active ? col : 'transparent'};color:${active ? '#fff' : col};
+             font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+      <span style="width:9px;height:9px;border-radius:50%;background:${active?'#fff':col};display:inline-block;"></span>
+      ${label}
+    </button>`;
+  }).join('');
+
+  const yrSel = document.getElementById('rent-chart-year');
+  if (yrSel && yrSel.options.length === 0) {
+    const cy = new Date().getFullYear();
+    for (let y = cy; y >= cy - 2; y--) {
+      const o = document.createElement('option');
+      o.value = y; o.textContent = y; if (y === cy) o.selected = true;
+      yrSel.appendChild(o);
+    }
+  }
+  if (yrSel) yrSel.style.display = _rentChartMode === 'anio' ? '' : 'none';
+}
+
+function toggleRentChartProp(id) {
+  _rentChartActiveProps[id] = !_rentChartActiveProps[id];
+  renderRentChart();
+}
+
+function renderRentChart() {
+  initRentChartToggles();
+  const canvas = document.getElementById('rent-chart-canvas');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  const tipo    = document.getElementById('rent-chart-tipo')?.value || 'neta';
+  const props   = getProperties();
+  const propIds = Object.keys(VALORES_PROPIEDAD_USD);
+  const now     = new Date();
+
+  // ── MODO: AÑO EN CURSO ──────────────────────────────
+  if (_rentChartMode === 'anio') {
+    const year   = parseInt(document.getElementById('rent-chart-year')?.value || now.getFullYear());
+    const maxMes = year === now.getFullYear() ? now.getMonth() : 11;
+    const labels = MESES;
+
+    function calcAnio(propId) {
+      const p      = props[propId] || {};
+      const valor  = VALORES_PROPIEDAD_USD[propId] || 0;
+      const moneda = p.moneda || 'ARS';
+      const pays   = getPayments(propId, year);
+      const montoC = parseNum(p.monto);
+      const realArr = [], estArr = [];
+      for (let mi = 0; mi < 12; mi++) {
+        const tc  = _rcGetTC(propId, year, mi);
+        const estUSD = montoC > 0 ? _rcToUSD(montoC, moneda, tc) : 0;
+        estArr.push(valor > 0 && estUSD > 0 ? estUSD / valor * 100 * 12 : null);
+        const m = pays[mi] || {};
+        let ingUSD = 0, gasUSD = 0;
+        if (m.estado === 'pagado') ingUSD = _rcToUSD(parseNum(m.monto), m.monedaPago || moneda, tc);
+        if (tipo === 'neta') getGastosMes(propId, year, mi).forEach(g => { gasUSD += _rcToUSD(parseNum(g.monto), g.moneda || moneda, tc); });
+        const realPct = valor > 0 && m.estado === 'pagado' ? ((ingUSD - gasUSD) / valor * 100 * 12) : null;
+        realArr.push(mi <= maxMes ? realPct : null);
+      }
+      return { realArr, estArr };
+    }
+
+    function calcTotalAnio() {
+      const totalValor = propIds.reduce((s,id) => s + (VALORES_PROPIEDAD_USD[id]||0), 0);
+      const realArr = Array(12).fill(null), estArr = Array(12).fill(null);
+      for (let mi = 0; mi < 12; mi++) {
+        let tReal = 0, tEst = 0, hasReal = false;
+        propIds.forEach(pid => {
+          const p = props[pid]||{}; const moneda = p.moneda||'ARS';
+          const pays = getPayments(pid, year); const tc = _rcGetTC(pid, year, mi);
+          const montoC = parseNum(p.monto);
+          if (montoC > 0) tEst += _rcToUSD(montoC, moneda, tc);
+          const m = pays[mi]||{};
+          if (m.estado === 'pagado') {
+            hasReal = true;
+            tReal += _rcToUSD(parseNum(m.monto), m.monedaPago||moneda, tc);
+            if (tipo === 'neta') getGastosMes(pid, year, mi).forEach(g => { tReal -= _rcToUSD(parseNum(g.monto), g.moneda||moneda, tc); });
+          }
+        });
+        estArr[mi]  = totalValor > 0 && tEst  > 0 ? tEst  / totalValor * 100 * 12 : null;
+        realArr[mi] = totalValor > 0 && hasReal && mi <= maxMes ? tReal / totalValor * 100 * 12 : null;
+      }
+      return { realArr, estArr };
+    }
+
+    _buildAndRenderChart(canvas, labels, propIds, tipo, calcAnio, calcTotalAnio, `Año ${year}`);
+
+  // ── MODO: DESDE INICIO DE CONTRATO ──────────────────
+  } else {
+    // Construir eje X: todos los meses desde el inicio del contrato más antiguo hasta hoy
+    let minDate = null;
+    propIds.forEach(pid => {
+      const p = props[pid] || {};
+      if (!p.inicio) return;
+      const d = new Date(p.inicio + 'T00:00:00');
+      if (!minDate || d < minDate) minDate = d;
+    });
+    if (!minDate) minDate = new Date(now.getFullYear(), 0, 1);
+
+    // Generar lista de {yr, mi, label}
+    const timeline = [];
+    let cur = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 1);
+    while (cur <= end) {
+      timeline.push({ yr: cur.getFullYear(), mi: cur.getMonth(), label: MESES[cur.getMonth()].slice(0,3) + ' ' + cur.getFullYear() });
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    const labels = timeline.map(t => t.label);
+
+    function calcContrato(propId) {
+      const p      = props[propId] || {};
+      const valor  = VALORES_PROPIEDAD_USD[propId] || 0;
+      const moneda = p.moneda || 'ARS';
+      const montoC = parseNum(p.monto);
+      const inicioDate = p.inicio ? new Date(p.inicio + 'T00:00:00') : null;
+      const realArr = [], estArr = [];
+      timeline.forEach(({ yr, mi }) => {
+        const mesDate = new Date(yr, mi, 1);
+        // Si el contrato no había iniciado aún → null
+        if (!inicioDate || mesDate < new Date(inicioDate.getFullYear(), inicioDate.getMonth(), 1)) {
+          realArr.push(null); estArr.push(null); return;
+        }
+        const pays = getPayments(propId, yr);
+        const tc   = _rcGetTC(propId, yr, mi);
+        const estUSD = montoC > 0 ? _rcToUSD(montoC, moneda, tc) : 0;
+        estArr.push(valor > 0 && estUSD > 0 ? estUSD / valor * 100 * 12 : null);
+        const m = pays[mi] || {};
+        let ingUSD = 0, gasUSD = 0;
+        if (m.estado === 'pagado') ingUSD = _rcToUSD(parseNum(m.monto), m.monedaPago || moneda, tc);
+        if (tipo === 'neta') getGastosMes(propId, yr, mi).forEach(g => { gasUSD += _rcToUSD(parseNum(g.monto), g.moneda||moneda, tc); });
+        const realPct = valor > 0 && m.estado === 'pagado' ? ((ingUSD - gasUSD) / valor * 100 * 12) : null;
+        realArr.push(realPct);
+      });
+      return { realArr, estArr };
+    }
+
+    function calcTotalContrato() {
+      const totalValor = propIds.reduce((s,id) => s + (VALORES_PROPIEDAD_USD[id]||0), 0);
+      const realArr = [], estArr = [];
+      timeline.forEach(({ yr, mi }) => {
+        let tReal = 0, tEst = 0, hasReal = false;
+        propIds.forEach(pid => {
+          const p = props[pid]||{}; const moneda = p.moneda||'ARS';
+          const pays = getPayments(pid, yr); const tc = _rcGetTC(pid, yr, mi);
+          const montoC = parseNum(p.monto);
+          if (montoC > 0) tEst += _rcToUSD(montoC, moneda, tc);
+          const m = pays[mi]||{};
+          if (m.estado === 'pagado') {
+            hasReal = true;
+            tReal += _rcToUSD(parseNum(m.monto), m.monedaPago||moneda, tc);
+            if (tipo === 'neta') getGastosMes(pid, yr, mi).forEach(g => { tReal -= _rcToUSD(parseNum(g.monto), g.moneda||moneda, tc); });
+          }
+        });
+        estArr.push(totalValor > 0 && tEst > 0  ? tEst  / totalValor * 100 * 12 : null);
+        realArr.push(totalValor > 0 && hasReal   ? tReal / totalValor * 100 * 12 : null);
+      });
+      return { realArr, estArr };
+    }
+
+    _buildAndRenderChart(canvas, labels, propIds, tipo, calcContrato, calcTotalContrato, 'Desde inicio de contrato');
+  }
+}
+
+function _buildAndRenderChart(canvas, labels, propIds, tipo, calcPropFn, calcTotalFn, periodoLabel) {
+  const datasets = [];
+  propIds.forEach(propId => {
+    if (!_rentChartActiveProps[propId]) return;
+    const col = RENT_CHART_COLORS[propId] || { real:'#888', est:'#ccc' };
+    const lbl = PROP_LABELS[propId] || propId;
+    const { realArr, estArr } = calcPropFn(propId);
+    datasets.push({ label: lbl+' — Real',     data: realArr, borderColor: col.real, backgroundColor: col.real+'20', borderWidth:2.5, pointRadius:3, pointHoverRadius:6, tension:0.35, fill:false });
+    datasets.push({ label: lbl+' — Estimada', data: estArr,  borderColor: col.est,  backgroundColor:'transparent',  borderWidth:1.5, borderDash:[5,4], pointRadius:2, pointHoverRadius:5, tension:0.35, fill:false });
+  });
+  if (_rentChartActiveProps['TOTAL']) {
+    const col = RENT_CHART_COLORS['TOTAL'];
+    const { realArr, estArr } = calcTotalFn();
+    datasets.push({ label:'TOTAL — Real',     data: realArr, borderColor: col.real, backgroundColor: col.real+'18', borderWidth:3,   pointRadius:4, pointHoverRadius:7, tension:0.35, fill:false });
+    datasets.push({ label:'TOTAL — Estimada', data: estArr,  borderColor: col.est,  backgroundColor:'transparent',  borderWidth:2,   borderDash:[6,4], pointRadius:2, pointHoverRadius:5, tension:0.35, fill:false });
+  }
+
+  if (_rentChartInstance) { _rentChartInstance.destroy(); _rentChartInstance = null; }
+
+  const textCol = '#5c574e', gridCol = 'rgba(0,0,0,0.07)';
+  _rentChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff', titleColor:'#1a1814', bodyColor: textCol,
+          borderColor:'#e8e4dc', borderWidth:1, padding:12,
+          callbacks: {
+            title: items => periodoLabel + ' · ' + (items[0]?.label||''),
+            label: ctx => ctx.parsed.y === null ? null : ' '+ctx.dataset.label+': '+ctx.parsed.y.toFixed(2)+'%'
+          }
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: gridCol },
+          ticks: { color: textCol, font:{ size:10, family:"'Plus Jakarta Sans',sans-serif" }, maxRotation: labels.length > 14 ? 45 : 0 }
+        },
+        y: {
+          grid: { color: gridCol },
+          ticks: { color: textCol, font:{ size:11, family:"'Plus Jakarta Sans',sans-serif" }, callback: v => v.toFixed(1)+'%' },
+          title: { display:true, text:'Rentabilidad anualizada (%)', color: textCol, font:{ size:10 } }
+        }
+      }
+    }
+  });
+
+  // Leyenda
+  const legendEl = document.getElementById('rent-chart-legend');
+  if (legendEl) {
+    const activeIds = [...Object.keys(VALORES_PROPIEDAD_USD).filter(id => _rentChartActiveProps[id]),
+                      ...(_rentChartActiveProps['TOTAL'] ? ['TOTAL'] : [])];
+    legendEl.innerHTML = activeIds.map(id => {
+      const col = RENT_CHART_COLORS[id]||{real:'#888',est:'#ccc'};
+      const lbl = PROP_LABELS[id]||id;
+      return `<div style="display:flex;align-items:center;gap:8px;background:var(--bg);padding:5px 11px;border-radius:8px;">
+        <span style="font-size:0.74rem;font-weight:700;color:var(--text2);">${lbl}</span>
+        <span style="display:flex;align-items:center;gap:3px;"><span style="width:20px;height:3px;background:${col.real};display:inline-block;border-radius:2px;"></span><span style="font-size:0.69rem;color:${col.real};font-weight:700;">Real</span></span>
+        <span style="display:flex;align-items:center;gap:3px;"><span style="width:20px;height:2px;border-top:2px dashed ${col.est};display:inline-block;"></span><span style="font-size:0.69rem;color:${col.est};font-weight:700;">Est.</span></span>
+      </div>`;
+    }).join('');
+  }
+  initRentChartToggles();
 }
 
 function renderAllPropsTable() {
@@ -4439,12 +4791,13 @@ function renderAllPropsTable() {
           '<span style="font-weight:700;color:var(--green);">USD ' + Math.round(ri.totalIngUSD).toLocaleString('es-AR') + '</span>' +
           '<br><span style="font-size:0.72rem;color:var(--text3);">' + mesesLabel + ' · desde ' + formatDate(p.inicio) + '</span>';
 
-        if (ri.totalIngUSD > 0 && valorUSD > 0) {
-          const pctB = Math.round(ri.totalIngUSD / valorUSD * 100);
+        if (ri.totalIngUSD > 0 && valorUSD > 0 && ri.mesesContrato > 0) {
+          // Anualizado: promedio mensual × 12
+          const pctB = Math.round((ri.totalIngUSD / ri.mesesContrato * 12) / valorUSD * 100);
           rentBrutaStr = '<span style="font-size:1.35rem;font-weight:800;color:var(--accent);letter-spacing:-0.01em;">' + pctB + '%</span>' +
-            '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">USD ' + Math.round(ri.totalIngUSD).toLocaleString('es-AR') + '</span>';
+            '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">anual · USD ' + Math.round(ri.totalIngUSD).toLocaleString('es-AR') + '</span>';
 
-          const pctN = Math.round(ri.netoUSD / valorUSD * 100);
+          const pctN = Math.round((ri.netoUSD / ri.mesesContrato * 12) / valorUSD * 100);
           const colorN = pctN >= 0 ? 'var(--green)' : 'var(--red)';
           const gasDisp = ri.totalGasUSD > 0
             ? '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">−USD ' + Math.round(ri.totalGasUSD).toLocaleString('es-AR') + ' gastos</span>'
@@ -4495,18 +4848,19 @@ function renderAllPropsTable() {
         return acc + (usd !== null ? usd : 0);
       }, 0);
 
-      rentBrutaStr = (totalCobradoAnioUSD > 0 && valorUSD > 0)
+      // Anualizado: promedio mensual cobrado × 12 / valor
+      rentBrutaStr = (totalCobradoAnioUSD > 0 && valorUSD > 0 && mesesConPago > 0)
         ? (() => {
-            const pct = Math.round(totalCobradoAnioUSD / valorUSD * 100);
+            const pct = Math.round((totalCobradoAnioUSD / mesesConPago * 12) / valorUSD * 100);
             return '<span style="font-size:1.35rem;font-weight:800;color:var(--accent);letter-spacing:-0.01em;">' + pct + '%</span>' +
-                   '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">USD ' + Math.round(totalCobradoAnioUSD).toLocaleString('es-AR') + '</span>';
+                   '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">anual · USD ' + Math.round(totalCobradoAnioUSD).toLocaleString('es-AR') + '</span>';
           })()
         : '<span style="color:var(--text3);">—</span>';
 
       const rentNetaAnioUSD = totalCobradoAnioUSD - totalGastosAnioUSD;
-      rentNetaStr = (totalCobradoAnioUSD > 0 && valorUSD > 0)
+      rentNetaStr = (totalCobradoAnioUSD > 0 && valorUSD > 0 && mesesConPago > 0)
         ? (() => {
-            const pct   = Math.round(rentNetaAnioUSD / valorUSD * 100);
+            const pct   = Math.round((rentNetaAnioUSD / mesesConPago * 12) / valorUSD * 100);
             const color = pct >= 0 ? 'var(--green)' : 'var(--red)';
             const gasDisplay = totalGastosAnioUSD > 0
               ? '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">−USD ' + Math.round(totalGastosAnioUSD).toLocaleString('es-AR') + ' gastos</span>'
