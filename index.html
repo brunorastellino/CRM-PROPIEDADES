@@ -1788,6 +1788,12 @@ async function _loadAllFromSupabase() {
       } catch(e) {}
     });
     _showSyncStatus('☁️ En línea', 'var(--text3)');
+
+    // ── MIGRACIÓN FORZADA POST-SUPABASE ──
+    // Siempre reescribir pagos y gastos con datos correctos
+    // Esto garantiza que datos corruptos en Supabase no afecten la app
+    _forceReseedPaymentsAndGastos();
+
     return true;
   } catch(e) {
     _showSyncStatus('📴 Offline — datos locales', 'var(--yellow)');
@@ -1798,6 +1804,122 @@ async function _loadAllFromSupabase() {
     }
     return false;
   }
+}
+
+// ── RESEED FORZADO ──
+// Siempre corre después de cargar Supabase.
+// Sobreescribe TODOS los pagos y gastos con los valores correctos.
+// También sube los datos correctos a Supabase para que no vuelvan a corromperse.
+function _forceReseedPaymentsAndGastos() {
+  const TC_ARS = {
+    2024:[1200,1150,1000,1040,1200,1300,1350,1300,1250,1200,1150,1100],
+    2025:[1150,1200,1250,1300,1320,1350,1380,1420,1480,1520,1550,1500],
+    2026:[1450,1405,1390,0,0,0,0,0,0,0,0,0]
+  };
+  const TC_PYG = {
+    2024:[7300,7350,7400,7450,7500,7550,7600,7650,7700,7750,7800,7900],
+    2025:[7300,7250,7200,7150,7100,7050,7000,7050,7100,6950,6800,6500],
+    2026:[6500,6450,6520,0,0,0,0,0,0,0,0,0]
+  };
+
+  function setPay(propId, year, monthIdx, monto, moneda, tc) {
+    const key = 'pay_' + propId + '_' + year;
+    if (!_localCache[key]) _localCache[key] = {};
+    _localCache[key][monthIdx] = {
+      estado: 'pagado', monto: String(monto), monedaPago: moneda,
+      tc: tc ? String(tc) : '', fecha: '', obs: ''
+    };
+  }
+
+  function savePayYear(propId, year) {
+    const key = 'pay_' + propId + '_' + year;
+    const val = _localCache[key] || {};
+    localStorage.setItem(key, JSON.stringify(val));
+    _syncToSupabase(key, val);
+  }
+
+  function setGasto(propId, year, mes, categoria, monto, moneda) {
+    const key = 'gastos_' + propId + '_' + year;
+    if (!_localCache[key]) _localCache[key] = [];
+    // Remove existing same category+mes, then add
+    _localCache[key] = _localCache[key].filter(g => !(parseInt(g.mes) === mes && g.categoria === categoria));
+    _localCache[key].push({ mes, categoria, descripcion: '', monto: String(monto), moneda });
+  }
+
+  function saveGastoYear(propId, year) {
+    const key = 'gastos_' + propId + '_' + year;
+    const val = _localCache[key] || [];
+    localStorage.setItem(key, JSON.stringify(val));
+    _syncToSupabase(key, val);
+  }
+
+  // ── HOLMBERG: jun 2024 → mar 2026, USD 300 ──
+  [5,6,7,8,9,10,11].forEach(m => setPay('holmer', 2024, m, 300, 'USD', null));
+  savePayYear('holmer', 2024);
+  [0,1,2,3,4,5,6,7,8,9,10,11].forEach(m => setPay('holmer', 2025, m, 300, 'USD', null));
+  savePayYear('holmer', 2025);
+  [0,1,2].forEach(m => setPay('holmer', 2026, m, 300, 'USD', null));
+  savePayYear('holmer', 2026);
+
+  // ── MOLAS TOWER: feb–mar 2026, GS 3.650.000 ──
+  setPay('lovemolas', 2026, 1, 3650000, 'PYG', TC_PYG[2026][1]);
+  setPay('lovemolas', 2026, 2, 3650000, 'PYG', TC_PYG[2026][2]);
+  savePayYear('lovemolas', 2026);
+
+  // ── GRAND CHELSEA: dic 2025 + ene–mar 2026, GS 3.900.000 ──
+  setPay('grandchelsea', 2025, 11, 3900000, 'PYG', TC_PYG[2025][11]);
+  savePayYear('grandchelsea', 2025);
+  [0,1,2].forEach(m => setPay('grandchelsea', 2026, m, 3900000, 'PYG', TC_PYG[2026][m]));
+  savePayYear('grandchelsea', 2026);
+
+  // ── YRIGOYEN: jun–ago 950k | sep–nov 1.002k | dic 1.071k | ene-feb 1.071k | mar 1.167k ──
+  [5,6,7].forEach(m  => setPay('irigoyen', 2025, m, 950000,  'ARS', TC_ARS[2025][m]));
+  [8,9,10].forEach(m => setPay('irigoyen', 2025, m, 1002000, 'ARS', TC_ARS[2025][m]));
+  setPay('irigoyen', 2025, 11, 1071000, 'ARS', TC_ARS[2025][11]);
+  savePayYear('irigoyen', 2025);
+  setPay('irigoyen', 2026, 0, 1071000, 'ARS', TC_ARS[2026][0]);
+  setPay('irigoyen', 2026, 1, 1071000, 'ARS', TC_ARS[2026][1]);
+  setPay('irigoyen', 2026, 2, 1167000, 'ARS', TC_ARS[2026][2]);
+  savePayYear('irigoyen', 2026);
+
+  // ── PH MELO: abr 2025 → mar 2026, USD 400 ──
+  [3,4,5,6,7,8,9,10,11].forEach(m => setPay('phmelo', 2025, m, 400, 'USD', null));
+  savePayYear('phmelo', 2025);
+  [0,1,2].forEach(m => setPay('phmelo', 2026, m, 400, 'USD', null));
+  savePayYear('phmelo', 2026);
+
+  // ── GASTOS ──
+  // Love Molas (PYG)
+  setGasto('lovemolas', 2026, 0, 'Expensa ordinaria', 518000, 'PYG');
+  setGasto('lovemolas', 2026, 1, 'Expensa ordinaria', 490000, 'PYG');
+  setGasto('lovemolas', 2026, 2, 'Expensa ordinaria', 529000, 'PYG');
+  saveGastoYear('lovemolas', 2026);
+
+  // Grand Chelsea (PYG)
+  setGasto('grandchelsea', 2025, 11, 'Expensa ordinaria', 473000, 'PYG');
+  saveGastoYear('grandchelsea', 2025);
+  setGasto('grandchelsea', 2026, 0, 'Expensa ordinaria', 447000, 'PYG');
+  setGasto('grandchelsea', 2026, 1, 'Expensa ordinaria', 447000, 'PYG');
+  setGasto('grandchelsea', 2026, 2, 'Expensa ordinaria', 470000, 'PYG');
+  saveGastoYear('grandchelsea', 2026);
+
+  // Holmberg (ARS)
+  setGasto('holmer', 2025, 11, 'Expensa extraordinaria', 127000, 'ARS');
+  saveGastoYear('holmer', 2025);
+  setGasto('holmer', 2026, 0, 'Expensa extraordinaria', 127000, 'ARS');
+  setGasto('holmer', 2026, 1, 'Expensa extraordinaria', 127000, 'ARS');
+  setGasto('holmer', 2026, 2, 'Expensa extraordinaria', 127000, 'ARS');
+  saveGastoYear('holmer', 2026);
+
+  // Yrigoyen (ARS)
+  setGasto('irigoyen', 2025, 8,  'Expensa extraordinaria',  17000, 'ARS');
+  setGasto('irigoyen', 2025, 10, 'Expensa extraordinaria',  75000, 'ARS');
+  setGasto('irigoyen', 2025, 11, 'Expensa extraordinaria',  75000, 'ARS');
+  saveGastoYear('irigoyen', 2025);
+  setGasto('irigoyen', 2026, 0,  'Expensa extraordinaria',  17000, 'ARS');
+  setGasto('irigoyen', 2026, 1,  'Expensa extraordinaria',  35000, 'ARS');
+  setGasto('irigoyen', 2026, 2,  'Expensa extraordinaria',  17000, 'ARS');
+  saveGastoYear('irigoyen', 2026);
 }
 
 // Polling: cada 8 segundos chequeá si hay cambios de otros dispositivos
@@ -2553,9 +2675,6 @@ function doLogin() {
     document.getElementById('app-container').classList.remove('hidden');
     document.getElementById('mobile-bottom-nav').style.display = '';
     initProperties();
-    // Re-correr seeds después del login (Supabase ya cargó)
-    if (typeof seedInitialPayments === 'function') seedInitialPayments();
-    if (typeof seedInitialGastos  === 'function') seedInitialGastos();
     showDashboard();
     startPolling();
   } else {
@@ -2592,13 +2711,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Cargar todos los datos desde Supabase primero
+  // _forceReseedPaymentsAndGastos() se llama automáticamente dentro de _loadAllFromSupabase
   await _loadAllFromSupabase();
   loadCustomPropValues();
-
-  // Re-correr migraciones forzadas DESPUÉS de Supabase (para pisar datos corruptos de la nube)
-  if (typeof seedInitialPayments === 'function') seedInitialPayments();
-  if (typeof seedInitialGastos  === 'function') seedInitialGastos();
-  // Las migraciones puntuales (fixPagos, fixGastos) ya corren en initApp()
 
   setData('session', { logged: false });
   document.getElementById('mobile-bottom-nav').style.display = 'none';
