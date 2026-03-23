@@ -4523,11 +4523,18 @@ function renderRentChart() {
       const moneda = p.moneda || 'ARS';
       const pays   = getPayments(propId, year);
       const montoC = parseNum(p.monto);
+
+      // TC FIJO para la estimada: promedio anual de referencia (línea plana)
+      const tcMeses = [0,1,2,3,4,5,6,7,8,9,10,11].map(mi => _rcGetTC(propId, year, mi)).filter(t => t > 0);
+      const tcFijo  = tcMeses.length > 0 ? tcMeses.reduce((a,b) => a+b, 0) / tcMeses.length : 0;
+      const estUSD  = montoC > 0 && moneda !== 'USD' && tcFijo > 0 ? montoC / tcFijo
+                    : montoC > 0 && moneda === 'USD' ? montoC : 0;
+      const estPct  = valor > 0 && estUSD > 0 ? estUSD / valor * 100 * 12 : null;
+
       const realArr = [], estArr = [];
       for (let mi = 0; mi < 12; mi++) {
-        const tc  = _rcGetTC(propId, year, mi);
-        const estUSD = montoC > 0 ? _rcToUSD(montoC, moneda, tc) : 0;
-        estArr.push(valor > 0 && estUSD > 0 ? estUSD / valor * 100 * 12 : null);
+        estArr.push(estPct); // CONSTANTE: mismo valor todos los meses
+        const tc = _rcGetTC(propId, year, mi);
         const m = pays[mi] || {};
         let ingUSD = 0, gasUSD = 0;
         if (m.estado === 'pagado') ingUSD = _rcToUSD(parseNum(m.monto), m.monedaPago || moneda, tc);
@@ -4540,14 +4547,26 @@ function renderRentChart() {
 
     function calcTotalAnio() {
       const totalValor = propIds.reduce((s,id) => s + (VALORES_PROPIEDAD_USD[id]||0), 0);
-      const realArr = Array(12).fill(null), estArr = Array(12).fill(null);
+
+      // TC FIJO por prop para estimada
+      const estPctTotal = (() => {
+        let tEst = 0;
+        propIds.forEach(pid => {
+          const p = props[pid]||{}; const moneda = p.moneda||'ARS';
+          const montoC = parseNum(p.monto);
+          const tcMeses = [0,1,2,3,4,5,6,7,8,9,10,11].map(mi => _rcGetTC(pid, year, mi)).filter(t => t > 0);
+          const tcFijo  = tcMeses.length > 0 ? tcMeses.reduce((a,b)=>a+b,0)/tcMeses.length : 0;
+          tEst += moneda === 'USD' ? montoC : (tcFijo > 0 ? montoC / tcFijo : 0);
+        });
+        return totalValor > 0 && tEst > 0 ? tEst / totalValor * 100 * 12 : null;
+      })();
+
+      const realArr = Array(12).fill(null), estArr = Array(12).fill(estPctTotal); // estimada CONSTANTE
       for (let mi = 0; mi < 12; mi++) {
-        let tReal = 0, tEst = 0, hasReal = false;
+        let tReal = 0, hasReal = false;
         propIds.forEach(pid => {
           const p = props[pid]||{}; const moneda = p.moneda||'ARS';
           const pays = getPayments(pid, year); const tc = _rcGetTC(pid, year, mi);
-          const montoC = parseNum(p.monto);
-          if (montoC > 0) tEst += _rcToUSD(montoC, moneda, tc);
           const m = pays[mi]||{};
           if (m.estado === 'pagado') {
             hasReal = true;
@@ -4555,7 +4574,6 @@ function renderRentChart() {
             if (tipo === 'neta') getGastosMes(pid, year, mi).forEach(g => { tReal -= _rcToUSD(parseNum(g.monto), g.moneda||moneda, tc); });
           }
         });
-        estArr[mi]  = totalValor > 0 && tEst  > 0 ? tEst  / totalValor * 100 * 12 : null;
         realArr[mi] = totalValor > 0 && hasReal && mi <= maxMes ? tReal / totalValor * 100 * 12 : null;
       }
       return { realArr, estArr };
@@ -4591,17 +4609,30 @@ function renderRentChart() {
       const moneda = p.moneda || 'ARS';
       const montoC = parseNum(p.monto);
       const inicioDate = p.inicio ? new Date(p.inicio + 'T00:00:00') : null;
+
+      // TC FIJO para estimada: promedio de todos los meses del contrato en el timeline
+      const tcsMeses = timeline
+        .filter(({yr, mi}) => {
+          if (!inicioDate) return false;
+          const md = new Date(yr, mi, 1);
+          return md >= new Date(inicioDate.getFullYear(), inicioDate.getMonth(), 1);
+        })
+        .map(({yr, mi}) => _rcGetTC(propId, yr, mi))
+        .filter(t => t > 0);
+      const tcFijo = tcsMeses.length > 0 ? tcsMeses.reduce((a,b)=>a+b,0)/tcsMeses.length : 0;
+      const estUSD = montoC > 0 && moneda !== 'USD' && tcFijo > 0 ? montoC / tcFijo
+                   : montoC > 0 && moneda === 'USD' ? montoC : 0;
+      const estPct = valor > 0 && estUSD > 0 ? estUSD / valor * 100 * 12 : null;
+
       const realArr = [], estArr = [];
       timeline.forEach(({ yr, mi }) => {
         const mesDate = new Date(yr, mi, 1);
-        // Si el contrato no había iniciado aún → null
         if (!inicioDate || mesDate < new Date(inicioDate.getFullYear(), inicioDate.getMonth(), 1)) {
           realArr.push(null); estArr.push(null); return;
         }
+        estArr.push(estPct); // CONSTANTE
         const pays = getPayments(propId, yr);
         const tc   = _rcGetTC(propId, yr, mi);
-        const estUSD = montoC > 0 ? _rcToUSD(montoC, moneda, tc) : 0;
-        estArr.push(valor > 0 && estUSD > 0 ? estUSD / valor * 100 * 12 : null);
         const m = pays[mi] || {};
         let ingUSD = 0, gasUSD = 0;
         if (m.estado === 'pagado') ingUSD = _rcToUSD(parseNum(m.monto), m.monedaPago || moneda, tc);
@@ -4614,14 +4645,31 @@ function renderRentChart() {
 
     function calcTotalContrato() {
       const totalValor = propIds.reduce((s,id) => s + (VALORES_PROPIEDAD_USD[id]||0), 0);
+
+      // TC FIJO por prop para estimada total
+      let tEstFijo = 0;
+      propIds.forEach(pid => {
+        const p = props[pid]||{}; const moneda = p.moneda||'ARS';
+        const montoC = parseNum(p.monto);
+        const inicioDate = p.inicio ? new Date(p.inicio + 'T00:00:00') : null;
+        const tcsMeses = timeline
+          .filter(({yr,mi}) => {
+            if (!inicioDate) return false;
+            return new Date(yr,mi,1) >= new Date(inicioDate.getFullYear(), inicioDate.getMonth(),1);
+          })
+          .map(({yr,mi}) => _rcGetTC(pid,yr,mi)).filter(t=>t>0);
+        const tcFijo = tcsMeses.length > 0 ? tcsMeses.reduce((a,b)=>a+b,0)/tcsMeses.length : 0;
+        tEstFijo += moneda === 'USD' ? montoC : (tcFijo > 0 ? montoC / tcFijo : 0);
+      });
+      const estPctTotal = totalValor > 0 && tEstFijo > 0 ? tEstFijo / totalValor * 100 * 12 : null;
+
       const realArr = [], estArr = [];
       timeline.forEach(({ yr, mi }) => {
-        let tReal = 0, tEst = 0, hasReal = false;
+        estArr.push(estPctTotal); // CONSTANTE
+        let tReal = 0, hasReal = false;
         propIds.forEach(pid => {
           const p = props[pid]||{}; const moneda = p.moneda||'ARS';
           const pays = getPayments(pid, yr); const tc = _rcGetTC(pid, yr, mi);
-          const montoC = parseNum(p.monto);
-          if (montoC > 0) tEst += _rcToUSD(montoC, moneda, tc);
           const m = pays[mi]||{};
           if (m.estado === 'pagado') {
             hasReal = true;
@@ -4629,8 +4677,7 @@ function renderRentChart() {
             if (tipo === 'neta') getGastosMes(pid, yr, mi).forEach(g => { tReal -= _rcToUSD(parseNum(g.monto), g.moneda||moneda, tc); });
           }
         });
-        estArr.push(totalValor > 0 && tEst > 0  ? tEst  / totalValor * 100 * 12 : null);
-        realArr.push(totalValor > 0 && hasReal   ? tReal / totalValor * 100 * 12 : null);
+        realArr.push(totalValor > 0 && hasReal ? tReal / totalValor * 100 * 12 : null);
       });
       return { realArr, estArr };
     }
