@@ -2124,8 +2124,16 @@ function seedGrandChelseaContract() {
    Usa versión para forzar recarga si cambió
 ═══════════════════════════════════════════════ */
 function seedInitialPayments() {
-  const SEED_VERSION = 'v8'; // incrementar si hay que re-seedear
+  const SEED_VERSION = 'v10'; // incrementar si hay que re-seedear
   if (getData('seed_payments_version', null) === SEED_VERSION) return;
+
+  // Limpiar pagos previos de todas las propiedades antes de re-sembrar
+  ['irigoyen','holmer','phmelo','lovemolas','grandchelsea'].forEach(pid => {
+    [2024,2025,2026].forEach(yr => {
+      const key = 'pay_' + pid + '_' + yr;
+      if (getData(key, null) !== null) setData(key, {});
+    });
+  });
 
   function seedPay(propId, year, monthIdx, monto, moneda, tc) {
     const key = 'pay_' + propId + '_' + year;
@@ -2142,17 +2150,17 @@ function seedInitialPayments() {
   }
 
   // ── TIPOS DE CAMBIO REFERENCIALES ──
-  // ARS por USD (dólar blue promedio mensual)
+  // ARS por USD (dólar blue)
   const TC_ARS = {
     2024: [1200,1150,1000,1040,1200,1300,1350,1300,1250,1200,1150,1100],
-    2025: [1215,1250,1300,1350,1400,1420,1450,1470,1480,1500,1520,1530],
-    2026: [1450,1405,1415, 0,   0,   0,   0,   0,   0,   0,   0,   0 ]
+    2025: [1150,1200,1250,1300,1320,1350,1380,1420,1480,1520,1550,1500],
+    2026: [1450,1405,1390, 0,   0,   0,   0,   0,   0,   0,   0,   0 ]
   };
-  // PYG por USD (guaraní promedio mensual)
+  // PYG por USD (guaraní)
   const TC_PYG = {
     2024: [7300,7350,7400,7450,7500,7550,7600,7650,7700,7750,7800,7900],
-    2025: [7900,7800,7700,7600,7500,7400,7300,7200,7100,7000,6800,6600],
-    2026: [6550,6450,6500, 0,   0,   0,   0,   0,   0,   0,   0,   0 ]
+    2025: [7300,7250,7200,7150,7100,7050,7000,7050,7100,6950,6800,6500],
+    2026: [6500,6450,6520, 0,   0,   0,   0,   0,   0,   0,   0,   0 ]
   };
 
   // ── HOLMBERG: jun 2024 → mar 2026, USD 300 (no necesita TC) ──
@@ -2182,8 +2190,16 @@ function seedInitialPayments() {
 }
 
 function seedInitialGastos() {
-  const SEED_VERSION = 'v1';
+  const SEED_VERSION = 'v3';
   if (getData('seed_gastos_version', null) === SEED_VERSION) return;
+
+  // Limpiar gastos previos de todas las propiedades antes de re-sembrar
+  ['irigoyen','holmer','phmelo','lovemolas','grandchelsea'].forEach(pid => {
+    [2024,2025,2026].forEach(yr => {
+      const key = 'gastos_' + pid + '_' + yr;
+      if (getData(key, null) !== null) setData(key, []);
+    });
+  });
 
   function seedGasto(propId, year, mes, categoria, monto, moneda) {
     const key = 'gastos_' + propId + '_' + year;
@@ -2215,7 +2231,6 @@ function seedInitialGastos() {
   seedGasto('lovemolas',   2026, 2, 'Expensa ordinaria', 529000, 'PYG'); // Mar
 
   // ── GRAND CHELSEA (PYG) ──
-  // Nota: el usuario escribió "Diciembre 2026" pero en contexto es Diciembre 2025
   seedGasto('grandchelsea', 2025, 11, 'Expensa ordinaria', 473000, 'PYG'); // Dic 2025
   seedGasto('grandchelsea', 2026, 0,  'Expensa ordinaria', 447000, 'PYG'); // Ene
   seedGasto('grandchelsea', 2026, 1,  'Expensa ordinaria', 447000, 'PYG'); // Feb
