@@ -5391,50 +5391,74 @@ function _renderMesesForYear(year, mesesFiltro, returnHTML) {
 
     /* ── DATOS DEL MES DE GASTOS ── */
     const gastosMes = getGastosMes(currentPropId, year, i);
-    const tc = _tc;   // TC sincronizado desde el pago de este mes
-    if (tc > 0) { tcSumAll += tc; tcCountAll++; }
-    const totalMesLocal = gastosMes.reduce((acc, g) => acc + parseNum(g.monto), 0);
-    const totalMesUSD   = tc > 0 ? (totalMesLocal / tc) : null;
+
+    // TC efectivo: del pago → tablas de referencia (para props que pagan en USD como Holmberg)
+    const TC_ARS_REF_G = {
+      2024:[1200,1150,1000,1040,1200,1300,1350,1300,1250,1200,1150,1100],
+      2025:[1150,1200,1250,1300,1320,1350,1380,1420,1480,1520,1550,1500],
+      2026:[1450,1405,1390,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+    };
+    const TC_PYG_REF_G = {
+      2024:[7300,7350,7400,7450,7500,7550,7600,7650,7700,7750,7800,7900],
+      2025:[7300,7250,7200,7150,7100,7050,7000,7050,7100,6950,6800,6500],
+      2026:[6500,6450,6520,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+    };
+    const tcRef = _tc > 0 ? _tc : ((esParaguay ? TC_PYG_REF_G : TC_ARS_REF_G)[year] || [])[i] || 0;
+
+    if (tcRef > 0) { tcSumAll += tcRef; tcCountAll++; }
+
+    // Total gastos del mes: separar USD de locales
+    let totalMesLocal = 0, totalMesUSD_directos = 0;
+    gastosMes.forEach(g => {
+      const v = parseNum(g.monto);
+      if ((g.moneda || monedaLocal) === 'USD') totalMesUSD_directos += v;
+      else totalMesLocal += v;
+    });
+    const totalMesUSD = totalMesUSD_directos + (tcRef > 0 ? totalMesLocal / tcRef : 0);
+    const hayGastos   = totalMesLocal > 0 || totalMesUSD_directos > 0;
+
     if (totalMesLocal > 0) totalGastosLocal += totalMesLocal;
-    if (totalMesUSD !== null) totalGastosUSD += totalMesUSD;
+    if (hayGastos) totalGastosUSD += totalMesUSD;
 
     const tcBlockGasto = `
       <div class="pay-field-group" style="margin-bottom:6px;">
         <span class="pay-field-label" style="color:var(--text3);">${tcLabelG}</span>
-        <input type="text" class="form-control" value="${tc > 0 ? (esParaguay ? '₲ ' : '$ ') + tc.toLocaleString('es-AR') : '—  (no cargado en Pagos)'}"
-          readonly style="background:var(--bg);color:${tc > 0 ? 'var(--text)' : 'var(--text3)'};font-weight:600;cursor:default;">
+        <input type="text" class="form-control" value="${tcRef > 0 ? (esParaguay ? '₲ ' : '$ ') + tcRef.toLocaleString('es-AR') : '—  (no disponible)'}"
+          readonly style="background:var(--bg);color:${tcRef > 0 ? 'var(--text)' : 'var(--text3)'};font-weight:600;cursor:default;">
       </div>`;
 
     let usdBlockGasto = '';
-    if (totalMesLocal > 0) {
-      if (totalMesUSD !== null) {
-        const usdStr = totalMesUSD >= 1
-          ? totalMesUSD.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2})
-          : totalMesUSD.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:4});
-        usdBlockGasto = `<div class="pay-usd-box" style="background:var(--red-light);">
-            <span class="usd-label" style="color:var(--red);">Total gastos USD</span>
-            <span class="usd-value" style="color:var(--red);">USD ${usdStr}</span>
-           </div>`;
-      } else {
-        usdBlockGasto = `<div style="background:var(--yellow-light);border-radius:var(--radius2);padding:8px 12px;font-size:0.8rem;color:var(--yellow);font-weight:500;">⚠ Cargá el TC en Pagos para ver USD</div>`;
-      }
+    if (hayGastos) {
+      const usdStr = totalMesUSD.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+      usdBlockGasto = `<div class="pay-usd-box" style="background:var(--red-light);">
+          <span class="usd-label" style="color:var(--red);">Total gastos USD</span>
+          <span class="usd-value" style="color:var(--red);">USD ${usdStr}</span>
+         </div>`;
     }
 
     const itemsHtml = gastosMes.length > 0
-      ? gastosMes.map((g, gi) => `
+      ? gastosMes.map((g, gi) => {
+          const gMoneda = g.moneda || monedaLocal;
+          const gMonto  = parseNum(g.monto);
+          const gUSD    = gMoneda === 'USD' ? gMonto : (tcRef > 0 ? Math.round(gMonto / tcRef) : null);
+          const montoStr = gMoneda === 'USD'
+            ? `<span style="font-weight:700;font-size:0.9rem;white-space:nowrap;">USD ${gMonto.toLocaleString('es-AR')}</span>`
+            : `<span style="font-weight:700;font-size:0.9rem;white-space:nowrap;">${gMoneda} ${gMonto.toLocaleString('es-AR')}${gUSD !== null ? ` <span style="font-size:0.75rem;color:var(--text3);font-weight:500;">≈ USD ${gUSD.toLocaleString('es-AR')}</span>` : ''}</span>`;
+          return `
           <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);gap:8px;">
             <div style="flex:1;min-width:0;overflow:hidden;">
               <span style="background:var(--accent-light);color:var(--accent);padding:2px 8px;border-radius:20px;font-size:0.71rem;font-weight:700;white-space:nowrap;">${g.categoria}</span>
               ${g.descripcion ? `<span style="font-size:0.8rem;color:var(--text2);margin-left:4px;">${g.descripcion}</span>` : ''}
             </div>
-            <span style="font-weight:700;font-size:0.9rem;white-space:nowrap;">${monedaLocalNombre} ${parseNum(g.monto).toLocaleString('es-AR')}</span>
+            ${montoStr}
             <button class="btn btn-danger btn-sm" style="padding:4px 8px;font-size:0.75rem;" onclick="removeGastoMes(${i},${gi},${year})">✕</button>
-          </div>`).join('')
+          </div>`;
+        }).join('')
       : `<p style="color:var(--text3);font-size:0.82rem;text-align:center;padding:10px 0;margin:0;">Sin gastos este mes</p>`;
 
-    // Resumen total del mes (badge)
-    const resumenMes = totalMesLocal > 0
-      ? `<span class="badge badge-red" style="margin-left:auto;">${monedaLocalNombre} ${totalMesLocal.toLocaleString('es-AR')}</span>`
+    // Resumen total del mes (badge) — mostrar en moneda local si hay, si no en USD
+    const resumenMes = hayGastos
+      ? `<span class="badge badge-red" style="margin-left:auto;">${totalMesLocal > 0 ? monedaLocal + ' ' + totalMesLocal.toLocaleString('es-AR') : ''} ${totalMesLocal > 0 && tcRef > 0 ? '≈ ' : ''}USD ${Math.round(totalMesUSD).toLocaleString('es-AR')}</span>`
       : '';
 
     const gastoHTML = `
@@ -5609,7 +5633,7 @@ function autoSavePayRow(i) {
   const esParaguay = (p.pais||'').toLowerCase().includes('paraguay');
   // Buscar el row con ID que incluye año (nuevo formato) o sin año (fallback)
   const tcInput = document.querySelector(`#gasto-row-${year}-${i} input[readonly]`) || document.querySelector(`#gasto-row-${i} input[readonly]`);
-  if (tcInput) tcInput.value = tc > 0 ? (esParaguay ? '\u20B2 ' : '$ ') + tc.toLocaleString('es-AR') : '\u2014  (no cargado en Pagos)';
+  if (tcInput) tcInput.value = tc > 0 ? (esParaguay ? '\u20B2 ' : '$ ') + tc.toLocaleString('es-AR') : '\u2014  (no disponible)';
 }
 
 function updatePayRow(i) {
