@@ -4452,8 +4452,14 @@ function _lcGetObjetivo(propId, props) {
   const monto = parseNum(p.monto);
   if (!monto) return null;
   if (p.moneda === 'USD') return monto / val * 100 * 12;
+
+  // TC del mes exacto de inicio del contrato (rentabilidad esperada al firmar)
   const ri = calcRentDesdeInicio(propId);
-  return _invEstPct(propId, ri);
+  if (!ri || !ri.rows.length) return null;
+  const inicioRow = ri.rows[0];
+  const tc = _rcGetTC(propId, inicioRow.yr, inicioRow.mi);
+  if (!tc) return null;
+  return (monto / tc) / val * 100 * 12;
 }
 
 function _lcDS(label, data, color, bw, pr, dashed) {
@@ -4495,9 +4501,37 @@ function renderLinechartProp() {
   let datasets = [];
   let labels   = [];
 
-  function getRenta(row, val, neta) {
-    if (!row || row.estado !== 'pagado' || !val) return null;
-    return ((neta ? row.ingUSD - row.gasUSD : row.ingUSD) / val) * 100 * 12;
+  // Calcula rentabilidad acumulada hasta el mes indicado dentro del año contractual,
+  // usando el mismo criterio que el panel "Rentabilidad por Propiedad":
+  //   (ingreso_acumulado / meses_cobrados * 12) / valor_propiedad * 100
+  function getRentaAcum(ri, val, upToYr, upToMi, neta) {
+    if (!ri || !val) return null;
+    let ac = null;
+    for (const a of ri.aniosContrato) {
+      if (a.rows.some(r => r.yr === upToYr && r.mi === upToMi)) { ac = a; break; }
+    }
+    if (!ac) return null;
+    let ingAcum = 0, gasAcum = 0, mesesCob = 0;
+    for (const r of ac.rows) {
+      if (r.yr > upToYr || (r.yr === upToYr && r.mi > upToMi)) break;
+      if (r.estado === 'pagado') { ingAcum += r.ingUSD; gasAcum += r.gasUSD; mesesCob++; }
+    }
+    if (mesesCob === 0) return null;
+    const base = neta ? (ingAcum - gasAcum) : ingAcum;
+    return (base / mesesCob * 12) / val * 100;
+  }
+
+  // Para modo 'aniocontrato' (índice relativo dentro del año contractual)
+  function getRentaAcumIdx(ac, val, upToIdx, neta) {
+    if (!ac || !val) return null;
+    let ingAcum = 0, gasAcum = 0, mesesCob = 0;
+    for (let i = 0; i <= upToIdx && i < ac.rows.length; i++) {
+      const r = ac.rows[i];
+      if (r.estado === 'pagado') { ingAcum += r.ingUSD; gasAcum += r.gasUSD; mesesCob++; }
+    }
+    if (mesesCob === 0) return null;
+    const base = neta ? (ingAcum - gasAcum) : ingAcum;
+    return (base / mesesCob * 12) / val * 100;
   }
 
   // ── AÑO EN CURSO ────────────────────────────────
@@ -4516,14 +4550,14 @@ function renderLinechartProp() {
       if (_lcMetrics.neta) {
         const d = Array(12).fill(null);
         for (let mi = 0; mi <= maxMes; mi++) {
-          d[mi] = getRenta(ri.rows.find(r => r.yr === year && r.mi === mi), val, true);
+          d[mi] = getRentaAcum(ri, val, year, mi, true);
         }
         datasets.push(_lcDS(lbl + ' · Neta', d, col, 2.5, 3.5, false));
       }
       if (_lcMetrics.bruta) {
         const d = Array(12).fill(null);
         for (let mi = 0; mi <= maxMes; mi++) {
-          d[mi] = getRenta(ri.rows.find(r => r.yr === year && r.mi === mi), val, false);
+          d[mi] = getRentaAcum(ri, val, year, mi, false);
         }
         datasets.push(_lcDS(lbl + ' · Bruta', d, col, 1.5, 0, true));
       }
@@ -4542,17 +4576,31 @@ function renderLinechartProp() {
       const dN = _lcMetrics.neta  ? Array(12).fill(null) : null;
       const dB = _lcMetrics.bruta ? Array(12).fill(null) : null;
       for (let mi = 0; mi <= maxMes; mi++) {
-        let sN = 0, sB = 0, hasAny = false;
+        let ingAcumN = 0, ingAcumB = 0, gasAcum = 0, mesesCobN = 0, mesesCobB = 0, hasAny = false;
         allIds.filter(id => _lcActiveProps[id]).forEach(id => {
           const ri2 = calcRentDesdeInicio(id);
-          if (!ri2) return;
-          const row = ri2.rows.find(r => r.yr === year && r.mi === mi);
-          if (!row || row.estado !== 'pagado') return;
-          hasAny = true; sN += row.ingUSD - row.gasUSD; sB += row.ingUSD;
+          const val2 = VALORES_PROPIEDAD_USD[id] || 0;
+          if (!ri2 || !val2) return;
+          // Acumular dentro del año contractual que contiene este mes
+          let ac2 = null;
+          for (const a of ri2.aniosContrato) {
+            if (a.rows.some(r => r.yr === year && r.mi === mi)) { ac2 = a; break; }
+          }
+          if (!ac2) return;
+          for (const r of ac2.rows) {
+            if (r.yr > year || (r.yr === year && r.mi > mi)) break;
+            if (r.estado === 'pagado') {
+              hasAny = true;
+              ingAcumB += r.ingUSD;
+              ingAcumN += r.ingUSD;
+              gasAcum  += r.gasUSD;
+              mesesCobN++; mesesCobB++;
+            }
+          }
         });
         if (hasAny && totVal > 0) {
-          if (dN) dN[mi] = sN / totVal * 100 * 12;
-          if (dB) dB[mi] = sB / totVal * 100 * 12;
+          if (dN && mesesCobN > 0) dN[mi] = (ingAcumN - gasAcum) / mesesCobN * 12 / totVal * 100;
+          if (dB && mesesCobB > 0) dB[mi] = ingAcumB / mesesCobB * 12 / totVal * 100;
         }
       }
       if (dN) datasets.push(_lcDS('Total · Neta',  dN, '#0f2547', 3.5, 0, false));
@@ -4574,12 +4622,12 @@ function renderLinechartProp() {
 
       if (_lcMetrics.neta) {
         const d = Array(12).fill(null);
-        ac.rows.forEach((row, idx) => { if (idx < 12) d[idx] = getRenta(row, val, true); });
+        ac.rows.forEach((row, idx) => { if (idx < 12) d[idx] = getRentaAcumIdx(ac, val, idx, true); });
         datasets.push(_lcDS(lbl + ' · Neta (desde ' + startLabel + ')', d, col, 2.5, 3.5, false));
       }
       if (_lcMetrics.bruta) {
         const d = Array(12).fill(null);
-        ac.rows.forEach((row, idx) => { if (idx < 12) d[idx] = getRenta(row, val, false); });
+        ac.rows.forEach((row, idx) => { if (idx < 12) d[idx] = getRentaAcumIdx(ac, val, idx, false); });
         datasets.push(_lcDS(lbl + ' · Bruta (desde ' + startLabel + ')', d, col, 1.5, 0, true));
       }
       if (_lcMetrics.objetivo) {
@@ -4593,17 +4641,25 @@ function renderLinechartProp() {
       const dN = _lcMetrics.neta  ? Array(12).fill(null) : null;
       const dB = _lcMetrics.bruta ? Array(12).fill(null) : null;
       for (let idx = 0; idx < 12; idx++) {
-        let sN = 0, sB = 0, hasAny = false;
+        let ingAcumN = 0, ingAcumB = 0, gasAcum = 0, mesesCobN = 0, mesesCobB = 0, hasAny = false;
         allIds.filter(id => _lcActiveProps[id]).forEach(id => {
           const ac2 = getACSeleccionado(id);
-          if (!ac2 || idx >= ac2.rows.length) return;
-          const row = ac2.rows[idx];
-          if (!row || row.estado !== 'pagado') return;
-          hasAny = true; sN += row.ingUSD - row.gasUSD; sB += row.ingUSD;
+          const val2 = VALORES_PROPIEDAD_USD[id] || 0;
+          if (!ac2 || idx >= ac2.rows.length || !val2) return;
+          for (let i = 0; i <= idx && i < ac2.rows.length; i++) {
+            const r = ac2.rows[i];
+            if (r.estado === 'pagado') {
+              hasAny = true;
+              ingAcumB += r.ingUSD;
+              ingAcumN += r.ingUSD;
+              gasAcum  += r.gasUSD;
+              mesesCobN++; mesesCobB++;
+            }
+          }
         });
         if (hasAny && totVal > 0) {
-          if (dN) dN[idx] = sN / totVal * 100 * 12;
-          if (dB) dB[idx] = sB / totVal * 100 * 12;
+          if (dN && mesesCobN > 0) dN[idx] = (ingAcumN - gasAcum) / mesesCobN * 12 / totVal * 100;
+          if (dB && mesesCobB > 0) dB[idx] = ingAcumB / mesesCobB * 12 / totVal * 100;
         }
       }
       if (dN) datasets.push(_lcDS('Total · Neta',  dN, '#0f2547', 3.5, 0, false));
@@ -4638,19 +4694,19 @@ function renderLinechartProp() {
       const lbl = INV_LABELS[propId] || (props[propId]?.nombre || propId);
       if (!ri || !val) return;
 
-      const rowMap = {};
-      ri.rows.forEach(r => { rowMap[r.yr + '-' + r.mi] = r; });
-
       if (_lcMetrics.neta) {
-        datasets.push(_lcDS(lbl + ' · Neta',  timeline.map(({yr,mi}) => getRenta(rowMap[yr+'-'+mi], val, true)),  col, 2.5, 3, false));
+        datasets.push(_lcDS(lbl + ' · Neta',  timeline.map(({yr,mi}) => getRentaAcum(ri, val, yr, mi, true)),  col, 2.5, 3, false));
       }
       if (_lcMetrics.bruta) {
-        datasets.push(_lcDS(lbl + ' · Bruta', timeline.map(({yr,mi}) => getRenta(rowMap[yr+'-'+mi], val, false)), col, 1.5, 0, true));
+        datasets.push(_lcDS(lbl + ' · Bruta', timeline.map(({yr,mi}) => getRentaAcum(ri, val, yr, mi, false)), col, 1.5, 0, true));
       }
       if (_lcMetrics.objetivo) {
         const obj = _lcGetObjetivo(propId, props);
         if (obj !== null) {
-          datasets.push(_lcDS(lbl + ' · Objetivo', timeline.map(({yr,mi}) => rowMap[yr+'-'+mi] ? obj : null), '#9b9590', 1.5, 0, true));
+          datasets.push(_lcDS(lbl + ' · Objetivo', timeline.map(({yr,mi}) => {
+            // Mostrar objetivo solo en meses donde la propiedad tiene datos
+            return ri.rows.some(r => r.yr === yr && r.mi === mi) ? obj : null;
+          }), '#9b9590', 1.5, 0, true));
         }
       }
     });
@@ -4660,16 +4716,29 @@ function renderLinechartProp() {
       const dN = _lcMetrics.neta  ? [] : null;
       const dB = _lcMetrics.bruta ? [] : null;
       timeline.forEach(({yr, mi}) => {
-        let sN = 0, sB = 0, hasAny = false;
+        let ingAcumN = 0, ingAcumB = 0, gasAcum = 0, mesesCobN = 0, mesesCobB = 0, hasAny = false;
         allIds.filter(id => _lcActiveProps[id]).forEach(id => {
           const ri2 = calcRentDesdeInicio(id);
-          if (!ri2) return;
-          const row = ri2.rows.find(r => r.yr === yr && r.mi === mi);
-          if (!row || row.estado !== 'pagado') return;
-          hasAny = true; sN += row.ingUSD - row.gasUSD; sB += row.ingUSD;
+          const val2 = VALORES_PROPIEDAD_USD[id] || 0;
+          if (!ri2 || !val2) return;
+          let ac2 = null;
+          for (const a of ri2.aniosContrato) {
+            if (a.rows.some(r => r.yr === yr && r.mi === mi)) { ac2 = a; break; }
+          }
+          if (!ac2) return;
+          for (const r of ac2.rows) {
+            if (r.yr > yr || (r.yr === yr && r.mi > mi)) break;
+            if (r.estado === 'pagado') {
+              hasAny = true;
+              ingAcumB += r.ingUSD;
+              ingAcumN += r.ingUSD;
+              gasAcum  += r.gasUSD;
+              mesesCobN++; mesesCobB++;
+            }
+          }
         });
-        const n = hasAny && totVal > 0 ? sN / totVal * 100 * 12 : null;
-        const b = hasAny && totVal > 0 ? sB / totVal * 100 * 12 : null;
+        const n = hasAny && totVal > 0 && mesesCobN > 0 ? (ingAcumN - gasAcum) / mesesCobN * 12 / totVal * 100 : null;
+        const b = hasAny && totVal > 0 && mesesCobB > 0 ? ingAcumB / mesesCobB * 12 / totVal * 100 : null;
         if (dN) dN.push(n);
         if (dB) dB.push(b);
       });
