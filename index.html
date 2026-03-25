@@ -49,6 +49,9 @@ body {
   line-height: 1.5;
   letter-spacing: -0.015em;
 }
+body:has(#screen-login:not(.hidden)) {
+  background: #0a1e45;
+}
 h1,h2,h3,h4 { line-height: 1.1; font-weight: 800; letter-spacing: -0.04em; }
 button { cursor: pointer; font-family: inherit; font-weight: 700; letter-spacing: -0.01em; }
 input, textarea, select { font-family: inherit; font-weight: 500; }
@@ -1056,9 +1059,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
               <th>Estado</th>
               <th id="th-mes-actual">Pago mes actual</th>
               <th id="th-cobrado-label" class="col-hide-mobile">Cobrado acumulado</th>
-              <th id="th-rent-bruta-label" class="col-hide-mobile">Rent. Bruta Anual</th>
-              <th id="th-rent-neta-label" class="col-hide-mobile">Rent. Neta Anual</th>
-              <th id="th-rent-proyectada" class="col-hide-mobile">Rent. Proyectada</th>
+              <th id="th-rent-neta-label" class="col-hide-mobile">Rent. Neta</th>
               <th class="col-hide-mobile">Valor Propiedad</th>
               <th></th>
             </tr>
@@ -1069,53 +1070,6 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     </div>
 
     <!-- Gráfico Rentabilidad -->
-    <div id="dash-rent-chart-card" class="card mb-2" style="margin-bottom:24px;">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
-        <div>
-          <h3 style="font-family:'Playfair Display',serif;font-weight:400;font-size:1.1rem;">📈 Rentabilidad Real vs. Estimada por Contrato</h3>
-          <p style="font-size:0.78rem;color:var(--text3);margin-top:2px;">Comparativa mensual en USD · % sobre valor de la propiedad</p>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <select id="rent-chart-tipo" onchange="renderRentChart()" style="padding:6px 10px;border:1.5px solid var(--border2);border-radius:8px;font-family:inherit;font-size:0.82rem;background:var(--surface);color:var(--text);font-weight:600;cursor:pointer;">
-            <option value="neta">Rent. Neta (ingresos − gastos)</option>
-            <option value="bruta">Rent. Bruta (solo ingresos)</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Modo: Año en curso / Año contractual / Desde contrato -->
-      <div style="display:flex;align-items:center;gap:0;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
-        <div style="display:flex;">
-          <button id="rch-btn-anio" onclick="setRentChartMode('anio')"
-            style="padding:7px 16px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;border-radius:8px 0 0 8px;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;transition:all 0.15s;">
-            📅 Año en curso
-          </button>
-          <button id="rch-btn-aniocontrato" onclick="setRentChartMode('aniocontrato')"
-            style="padding:7px 16px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
-            📆 Año contractual
-          </button>
-          <button id="rch-btn-contrato" onclick="setRentChartMode('contrato')"
-            style="padding:7px 16px;font-size:0.82rem;font-weight:600;border:1.5px solid var(--border2);border-radius:0 8px 8px 0;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
-            📋 Desde inicio de contrato
-          </button>
-        </div>
-        <!-- Selector de año calendario (solo visible en modo año) -->
-        <select id="rent-chart-year" onchange="renderRentChart()" style="padding:6px 10px;border:1.5px solid var(--border2);border-radius:8px;font-family:inherit;font-size:0.82rem;background:var(--surface);color:var(--text);font-weight:600;cursor:pointer;"></select>
-        <!-- Selector de año contractual (solo visible en modo aniocontrato) -->
-        <div id="rch-aniocontrato-selector" style="display:none;align-items:center;gap:6px;"></div>
-      </div>
-
-      <!-- Toggles de propiedades -->
-      <div id="rent-chart-toggles" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
-
-      <!-- Canvas -->
-      <div style="position:relative;width:100%;height:340px;">
-        <canvas id="rent-chart-canvas"></canvas>
-      </div>
-      <!-- Leyenda custom -->
-      <div id="rent-chart-legend" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;justify-content:center;"></div>
-    </div>
-
     <h3 style="font-family:'Playfair Display',serif; font-weight:400; font-size:1.25rem; margin-bottom:16px;">Acceso por País</h3>
     <div class="country-grid">
       <div class="country-card" onclick="showCountry('Argentina')">
@@ -1213,18 +1167,87 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <button class="btn btn-ghost" onclick="showDashboard()">← Volver</button>
       </div>
     </div>
+    <!-- Panel rentabilidades por propiedad — movido desde inicio -->
+    <div class="card" style="margin-bottom:24px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+        <div>
+          <div style="font-family:'Sora',sans-serif;font-size:1.05rem;font-weight:800;color:var(--text);">Rentabilidad por Propiedad</div>
+          <div style="font-size:0.78rem;color:var(--text3);margin-top:2px;" id="dash-rent-subtitle">Desde inicio de contrato</div>
+        </div>
+        <div style="display:flex;gap:0;align-items:center;">
+          <button id="drent-btn-anio" onclick="setDashRentMode('anio')"
+            style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;border-radius:8px 0 0 8px;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            📅 Año en curso
+          </button>
+          <button id="drent-btn-aniocontrato" onclick="setDashRentMode('aniocontrato')"
+            style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            📆 Año contractual
+          </button>
+          <button id="drent-btn-contrato" onclick="setDashRentMode('contrato')"
+            style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-radius:0 8px 8px 0;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            📋 Desde contrato
+          </button>
+        </div>
+      </div>
+      <div id="dash-rent-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px;"></div>
+    </div>
+
+    <!-- Resultado total de la operación -->
+    <div id="resultado-total-card" class="card" style="margin-bottom:28px;background:linear-gradient(135deg,#0f2547 0%,#1a3a6b 100%);border:none;color:#fff;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="font-family:'Sora',sans-serif;font-size:1.05rem;font-weight:800;color:#fff;">📊 Resultado Total de la Operación</div>
+          <div id="resultado-total-badge" style="background:rgba(255,255,255,0.12);border-radius:20px;padding:3px 12px;font-size:0.75rem;font-weight:600;color:rgba(255,255,255,0.7);">Desde inicio de contrato</div>
+        </div>
+        <div style="display:flex;gap:0;align-items:center;">
+          <button id="rt-btn-anio" onclick="setResultadoMode('anio')"
+            style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid rgba(255,255,255,0.25);border-right:none;border-radius:8px 0 0 8px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            📅 Año en curso
+          </button>
+          <button id="rt-btn-aniocontrato" onclick="setResultadoMode('aniocontrato')"
+            style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid rgba(255,255,255,0.25);border-right:none;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            📆 Año contractual
+          </button>
+          <button id="rt-btn-contrato" onclick="setResultadoMode('contrato')"
+            style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid rgba(255,255,255,0.25);border-radius:0 8px 8px 0;background:rgba(255,255,255,0.85);color:#0f2547;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            📋 Desde contrato
+          </button>
+        </div>
+      </div>
+      <div id="resultado-total-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"></div>
+    </div>
+
     <div id="centro-body"></div>
+
   </div>
 
   <!-- COUNTRY VIEW -->
   <div id="screen-country" class="hidden">
-    <div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+    <div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
       <div>
         <h2 id="country-title"></h2>
-        <p id="country-sub"></p>
+        <p id="country-sub" style="color:var(--text3);font-size:0.88rem;margin-top:4px;"></p>
       </div>
-      <button class="btn btn-ghost" onclick="showDashboard()">← Volver</button>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div style="display:flex;gap:0;">
+          <button id="sc-btn-anio" onclick="setCountryMode('anio')"
+            style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;border-radius:8px 0 0 8px;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            📅 Año en curso
+          </button>
+          <button id="sc-btn-aniocontrato" onclick="setCountryMode('aniocontrato')"
+            style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            📆 Año contractual
+          </button>
+          <button id="sc-btn-contrato" onclick="setCountryMode('contrato')"
+            style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-radius:0 8px 8px 0;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            📋 Desde contrato
+          </button>
+        </div>
+        <button class="btn btn-ghost" onclick="showDashboard()">← Volver</button>
+      </div>
     </div>
+    <div id="country-rent-summary" style="margin-bottom:20px;"></div>
+    <div id="country-props-table" style="margin-bottom:24px;"></div>
     <div class="prop-grid" id="country-props"></div>
   </div>
 
@@ -2881,33 +2904,138 @@ function showCentroComputos() {
       sel.appendChild(opt);
     }
   }
+  // Sincronizar el panel de rentabilidad al modo "contrato" al abrir el dashboard de inversión
+  _dashRentMode = 'contrato';
+  const dBtns = { anio: 'drent-btn-anio', aniocontrato: 'drent-btn-aniocontrato', contrato: 'drent-btn-contrato' };
+  Object.entries(dBtns).forEach(([k, bid]) => {
+    const b = document.getElementById(bid);
+    if (!b) return;
+    b.style.background = k === 'contrato' ? 'var(--accent)' : 'var(--surface)';
+    b.style.color = k === 'contrato' ? '#fff' : 'var(--text2)';
+  });
+  const dSub = document.getElementById('dash-rent-subtitle');
+  if (dSub) dSub.textContent = 'Desde inicio de contrato';
+  renderDashRent();
+  renderResultadoTotal();
   renderCentroComputos();
 }
 
 var ccMode = 'calendario'; // 'calendario' | 'contrato'
 
 function setCCMode(mode) {
-  ccMode = mode;
-  const btnCal  = document.getElementById('cc-toggle-calendario');
-  const btnAnioC= document.getElementById('cc-toggle-aniocontrato');
-  const btnCon  = document.getElementById('cc-toggle-contrato');
-  const yearSel = document.getElementById('cc-year');
-  const acSel   = document.getElementById('cc-aniocontrato-selector');
-  if (!btnCal) return;
-  [btnCal, btnAnioC, btnCon].forEach(b => { if(b){ b.style.background='var(--surface)'; b.style.color='var(--text2)'; } });
-  if (yearSel) yearSel.style.display = 'none';
-  if (acSel)   acSel.style.display   = 'none';
-  if (mode === 'calendario') {
-    btnCal.style.background = 'var(--accent)'; btnCal.style.color = '#fff';
-    if (yearSel) yearSel.style.display = '';
-  } else if (mode === 'aniocontrato') {
-    if (btnAnioC) { btnAnioC.style.background = 'var(--accent)'; btnAnioC.style.color = '#fff'; }
-    if (acSel) acSel.style.display = 'flex';
-    populatePortfolioSelector('cc-anio-num');
-  } else {
-    btnCon.style.background = 'var(--accent)'; btnCon.style.color = '#fff';
+  // Translate calendario→anio then delegate to the master sync
+  const dashMode = mode === 'calendario' ? 'anio' : mode;
+  setDashRentMode(dashMode);
+}
+
+/* ═══════════════════════════════════════════════
+   RESULTADO TOTAL DE LA OPERACIÓN
+═══════════════════════════════════════════════ */
+var _resMode = 'contrato'; // 'anio' | 'aniocontrato' | 'contrato'
+
+function setResultadoMode(mode) {
+  setDashRentMode(mode);
+}
+
+function renderResultadoTotal() {
+  const body  = document.getElementById('resultado-total-body');
+  const badge = document.getElementById('resultado-total-badge');
+  if (!body) return;
+
+  const props    = getProperties();
+  const now      = new Date();
+  const year     = now.getFullYear();
+  const curMonth = now.getMonth();
+  const MESES_L  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // ── Aggregate using IDENTICAL logic to renderDashRent ──
+  let totalIng = 0, totalGas = 0, totalValor = 0;
+  let totalMesesCob = 0, propCount = 0;
+
+  Object.entries(props).forEach(([id, p]) => {
+    if (!p.inicio) return;
+    const ri  = calcRentDesdeInicio(id);
+    if (!ri || !ri.rows || ri.rows.length === 0) return;
+    const val = VALORES_PROPIEDAD_USD[id] || 0;
+    propCount++;
+    totalValor += val;
+    let ingUSD = 0, gasUSD = 0, mesesCob = 0;
+
+    if (_resMode === 'anio') {
+      const rows = ri.rows.filter(r => r.yr === year);
+      ingUSD   = rows.reduce((s,r) => s + r.ingUSD, 0);
+      gasUSD   = rows.reduce((s,r) => s + r.gasUSD, 0);
+      mesesCob = rows.filter(r => r.estado === 'pagado').length;
+    } else if (_resMode === 'aniocontrato') {
+      const ac = ri.aniosContrato[ri.aniosContrato.length - 1];
+      if (!ac) return;
+      ingUSD   = ac.ingUSD;  gasUSD = ac.gasUSD;
+      mesesCob = ac.mesesCobrados;
+    } else {
+      ingUSD   = ri.totalIngUSD;
+      gasUSD   = ri.totalGasUSD;
+      mesesCob = ri.rows.filter(r => r.estado === 'pagado').length;
+    }
+    totalIng      += ingUSD;
+    totalGas      += gasUSD;
+    totalMesesCob += mesesCob;
+  });
+
+  const totalNeto = totalIng - totalGas;
+  const mesesProm = propCount > 0 ? totalMesesCob / propCount : 1;
+  const rentBruta = totalValor > 0 && totalIng > 0 && mesesProm > 0
+    ? (totalIng / mesesProm * 12 / totalValor * 100) : null;
+  const rentNeta  = totalValor > 0 && mesesProm > 0
+    ? (totalNeto / mesesProm * 12 / totalValor * 100) : null;
+
+  // Mes actual — from ri.rows (same source)
+  let ingMes = 0, gasMes = 0;
+  Object.entries(props).forEach(([id, p]) => {
+    if (!p.inicio) return;
+    const ri = calcRentDesdeInicio(id);
+    if (!ri) return;
+    const row = ri.rows.find(r => r.yr === year && r.mi === curMonth);
+    if (row) { ingMes += row.ingUSD; gasMes += row.gasUSD; }
+  });
+  const netoMes = ingMes - gasMes;
+
+  const periodoFull  = _resMode === 'anio' ? 'Año en curso · ' + year
+    : _resMode === 'aniocontrato' ? 'Último año contractual' : 'Desde inicio de contrato';
+  const periodoCorto = _resMode === 'anio' ? String(year)
+    : _resMode === 'aniocontrato' ? 'año contractual' : 'desde inicio';
+  if (badge) badge.textContent = periodoFull + ' · ' + propCount + ' propiedad' + (propCount !== 1 ? 'es' : '');
+
+  function usd(v)  { return 'USD ' + Math.round(Math.abs(v)).toLocaleString('es-AR'); }
+  function sgn(v)  { if (v === 0) return '—'; return (v >= 0 ? '+' : '−') + ' USD ' + Math.round(Math.abs(v)).toLocaleString('es-AR'); }
+  function pct(v)  { return v !== null ? (v >= 0 ? '+' : '') + v.toFixed(1) + '%' : '—'; }
+
+  const cNeto  = totalNeto >= 0 ? '#4ade80' : '#f87171';
+  const cNetoM = netoMes   >= 0 ? '#4ade80' : '#f87171';
+  const cRN    = rentNeta  !== null ? (rentNeta >= 0 ? '#4ade80' : '#f87171') : '#94a3b8';
+
+  function kpi(label, value, color, sub) {
+    return '<div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:18px 20px;">' +
+      '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:rgba(255,255,255,0.55);margin-bottom:6px;">' + label + '</div>' +
+      '<div style="font-size:1.55rem;font-weight:900;letter-spacing:-0.02em;line-height:1.1;color:' + color + ';">' + value + '</div>' +
+      (sub ? '<div style="font-size:0.72rem;color:rgba(255,255,255,0.45);margin-top:6px;">' + sub + '</div>' : '') +
+    '</div>';
   }
-  renderCentroComputos();
+
+  // 2×3 layout
+  body.innerHTML =
+    kpi('Rent. bruta anualizada', pct(rentBruta), '#93c5fd',
+        totalValor > 0 ? 'Sobre USD ' + totalValor.toLocaleString('es-AR') + ' invertido' : 'Sin valor cargado') +
+    kpi('Rent. neta anualizada', pct(rentNeta), cRN,
+        'Ingresos netos / valor portfolio · ' + propCount + ' prop.') +
+    kpi('Total cobrado · ' + periodoCorto, totalIng > 0 ? usd(totalIng) : '—', '#a5f3c0',
+        Math.round(mesesProm) + ' meses promedio cobrados') +
+    kpi('Total gastos · ' + periodoCorto, totalGas > 0 ? usd(totalGas) : '—', '#fca5a5',
+        'Expensas, reparaciones y otros') +
+    kpi('Resultado neto · ' + periodoCorto, sgn(totalNeto), cNeto,
+        'Cobrado − gastos del período') +
+    kpi('Neto ' + MESES_L[curMonth] + ' ' + year,
+        netoMes !== 0 ? sgn(netoMes) : (ingMes > 0 ? sgn(ingMes) : '—'), cNetoM,
+        ingMes > 0 ? 'Cobrado: ' + usd(ingMes) + ' · Gastos: ' + usd(gasMes) : 'Sin cobros este mes');
 }
 
 function renderCentroComputos() {
@@ -3082,46 +3210,6 @@ function renderCentroComputos() {
   var portRentBrutaAnio = portValorTotal > 0 && portIngAnio > 0 ? (portIngAnio / portMesesBase * 12 / portValorTotal * 100) : null;
   var portRentNetaAnio  = portValorTotal > 0 && (portIngAnio > 0 || portGasAnio > 0) ? (portNetoAnio / portMesesBase * 12 / portValorTotal * 100) : null;
 
-  // ─── Tabla mensual del portfolio ───
-  let tablaFilasHTML = '';
-  for (let i = 0; i < 12; i++) {
-    let ingMes = 0, gasMes = 0;
-    allEntries.forEach(function(entry) {
-      const id = entry[0]; const p = entry[1];
-      const pays = getPayments(id, year);
-      const esP = (p.pais || '').toLowerCase().includes('paraguay');
-      const mLocal = esP ? 'PYG' : (p.moneda || 'ARS');
-      const tblR = (esP ? _CC_TC_PYG : _CC_TC_ARS)[year] || [];
-      const tcP = getPropTCProm(pays, esP);
-      const m = pays[i] || {};
-      const monto = parseNum(m.monto);
-      const tc    = parseNum(m.tc);
-      const mpago = m.monedaPago || mLocal;
-      const tcMesI = tc > 0 ? tc : (tblR[i] > 0 ? tblR[i] : tcP);
-      if (m.estado === 'pagado' && monto > 0) {
-        ingMes += getMontoUSD(monto, tc, mpago, mLocal, tcMesI);
-      }
-      const gMes = getGastosMes(id, year, i);
-      gMes.forEach(function(g) {
-        const v = parseNum(g.monto);
-        const cur = g.moneda || mLocal;
-        if (cur === 'USD') gasMes += v;
-        else if (tcMesI > 0) gasMes += Math.round(v / tcMesI);
-      });
-    });
-    const neto = ingMes - gasMes;
-    const isCur = (i === curMonth && year === now.getFullYear());
-    const bg   = isCur ? 'background:#e8eef8;' : '';
-    const fw   = isCur ? 'font-weight:700;' : '';
-    const curBadge = isCur ? ' <span style="font-size:0.65rem;background:#1a3a6b;color:#fff;padding:1px 5px;border-radius:6px;">HOY</span>' : '';
-    const netoC = neto >= 0 ? '#2e7d52' : '#c0392b';
-    tablaFilasHTML += '<tr style="border-bottom:1px solid var(--border);' + bg + '">' +
-      '<td style="padding:8px 12px;' + fw + '">' + MESES[i] + curBadge + '</td>' +
-      '<td style="padding:8px 12px;text-align:right;color:#2e7d52;font-weight:600;">' + (ingMes > 0 ? usdFmt(ingMes) : '<span style="color:#9b9590">—</span>') + '</td>' +
-      '<td style="padding:8px 12px;text-align:right;color:#c0392b;font-weight:600;">' + (gasMes > 0 ? usdFmt(gasMes) : '<span style="color:#9b9590">—</span>') + '</td>' +
-      '<td style="padding:8px 12px;text-align:right;font-weight:700;color:' + netoC + ';">' + ((ingMes > 0 || gasMes > 0) ? usdFmtSigned(neto) : '<span style="color:#9b9590">—</span>') + '</td>' +
-      '</tr>';
-  }
 
   // ─── Build HTML ───
   // KPI bar
@@ -3555,180 +3643,197 @@ function renderCentroComputos() {
     '</div>'
   ) : '';
 
-  // ─── Rentabilidad por País ───
+  body.innerHTML =
+    warningTC +
+    '<div id="pais-body" style="margin-bottom:32px;"></div>';
+
+  // Render rentabilidad por país separately (has its own mode)
+  renderPorPais();
+  // Render investment chart
+  renderInvChart();
+}
+
+
+/* ═══════════════════════════════════════════════
+   RENTABILIDAD POR PAÍS — standalone panel
+═══════════════════════════════════════════════ */
+var _paisMode = 'contrato'; // 'anio' | 'aniocontrato' | 'contrato'
+
+function setPaisMode(mode) {
+  setDashRentMode(mode); // delegates to master — syncs all panels
+}
+
+function renderPorPais() {
+  const el = document.getElementById('pais-body');
+  if (!el) return;
+
+  const props      = getProperties();
+  const allEntries = Object.entries(props);
+  const now        = new Date();
+  const year       = now.getFullYear();
+  const curMonth   = now.getMonth();
+
+  const TC_ARS = {
+    2024:[1200,1150,1000,1040,1200,1300,1350,1300,1250,1200,1150,1100],
+    2025:[1150,1200,1250,1300,1320,1350,1380,1420,1480,1520,1550,1500],
+    2026:[1450,1405,1390,1390,1400,1410,1420,1430,1440,1450,1460,1470],
+  };
+  const TC_PYG = {
+    2024:[7300,7350,7400,7450,7500,7550,7600,7650,7700,7750,7800,7900],
+    2025:[7300,7250,7200,7150,7100,7050,7000,7050,7100,6950,6800,6500],
+    2026:[6500,6450,6520,6500,6480,6460,6440,6420,6400,6380,6360,6340],
+  };
+
+  function getPropTCP(pays, esP) {
+    var s = 0, c = 0;
+    var tbl = (esP ? TC_PYG : TC_ARS)[year] || [];
+    for (var mi = 0; mi < 12; mi++) {
+      var t = parseNum((pays[mi]||{}).tc);
+      if (t > 0) { s+=t; c++; } else if (tbl[mi]>0) { s+=tbl[mi]; c++; }
+    }
+    return c > 0 ? s/c : 0;
+  }
+
+  const modoLabel = _paisMode === 'anio' ? 'Año en curso · ' + year
+    : _paisMode === 'aniocontrato' ? 'Último año contractual' : 'Desde inicio de contrato';
+  const periodoKPI = _paisMode === 'anio' ? String(year)
+    : _paisMode === 'aniocontrato' ? 'Año contract.' : 'Desde contrato';
+
+  // ── Build HTML ──
+  var paisesHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">';
+
   var PAISES = ['Argentina', 'Paraguay'];
   var paisFlags = { 'Argentina': '🇦🇷', 'Paraguay': '🇵🇾' };
-
-  var porPaisHTML = '<div style="margin-bottom:32px;">' +
-    '<h3 style="font-family:\'Playfair Display\',serif;font-weight:400;font-size:1.15rem;margin-bottom:18px;">🌎 Rentabilidad por País</h3>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">';
 
   PAISES.forEach(function(pais) {
     var entries = allEntries.filter(function(e) { return e[1].pais === pais; });
     if (entries.length === 0) return;
 
     var flag = paisFlags[pais] || '';
+    var paisIng = 0, paisGas = 0, paisValorTotal = 0;
+    var paisMesesCob = 0, paisPropCount = 0;
 
-    // ── Acumulados año en curso ──
-    var paisIngAnio = 0, paisGasAnio = 0, paisValorTotal = 0;
-    entries.forEach(function(entry) {
-      var pid = entry[0]; var pp = entry[1];
-      var pays = getPayments(pid, year);
-      var esP = (pp.pais||'').toLowerCase().includes('paraguay');
-      var mLocal = esP ? 'PYG' : (pp.moneda || 'ARS');
-      var tcP = getPropTCProm(pays, esP);
-      var tblRPais = (esP ? _CC_TC_PYG : _CC_TC_ARS)[year] || [];
-      for (var mi = 0; mi < 12; mi++) {
-        var m = pays[mi] || {};
-        var monto = parseNum(m.monto);
-        var tc = parseNum(m.tc);
-        var mpago = m.monedaPago || mLocal;
-        var tcMesPais = tc > 0 ? tc : (tblRPais[mi] > 0 ? tblRPais[mi] : tcP);
-        if (m.estado === 'pagado' && monto > 0) paisIngAnio += getMontoUSD(monto, tc, mpago, mLocal, tcMesPais);
-        var gMes = getGastosMes(pid, year, mi);
-        gMes.forEach(function(g) {
-          var v = parseNum(g.monto); var cur = g.moneda || mLocal;
-          if (cur === 'USD') paisGasAnio += v;
-          else if (tcMesPais > 0) paisGasAnio += Math.round(v / tcMesPais);
-        });
-      }
-      paisValorTotal += VALORES_PROPIEDAD_USD[pid] || 0;
-    });
-    var paisNetoAnio = paisIngAnio - paisGasAnio;
-    var paisRBAnio   = paisValorTotal > 0 && paisIngAnio > 0 ? (paisIngAnio / (curMonth + 1) * 12 / paisValorTotal * 100).toFixed(1) + '%' : '—';
-    var paisRNAnio   = paisValorTotal > 0 && paisIngAnio > 0 ? (paisNetoAnio / (curMonth + 1) * 12 / paisValorTotal * 100).toFixed(1) + '%' : '—';
-    var paisRNAnioC  = paisNetoAnio >= 0 ? '#2e7d52' : '#c0392b';
-
-    // ── Acumulados desde inicio de contrato ──
-    var paisIngInicio = 0, paisGasInicio = 0, paisMesesInicio = 0;
-    entries.forEach(function(entry) {
-      var pid = entry[0];
-      var ri = calcRentDesdeInicio(pid);
-      if (ri) { paisIngInicio += ri.totalIngUSD; paisGasInicio += ri.totalGasUSD; paisMesesInicio += ri.mesesContrato; }
-    });
-    var paisNetoInicio = paisIngInicio - paisGasInicio;
-    var paisMesesPromInicio = entries.length > 0 ? paisMesesInicio / entries.length : 1;
-    var paisRBInicio   = paisValorTotal > 0 && paisIngInicio > 0 && paisMesesPromInicio > 0 ? (paisIngInicio / paisMesesPromInicio * 12 / paisValorTotal * 100).toFixed(1) + '%' : '—';
-    var paisRNInicio   = paisValorTotal > 0 && paisIngInicio > 0 && paisMesesPromInicio > 0 ? (paisNetoInicio / paisMesesPromInicio * 12 / paisValorTotal * 100).toFixed(1) + '%' : '—';
-    var paisRNInicioC  = paisNetoInicio >= 0 ? '#2e7d52' : '#c0392b';
-
-    // ── Rentabilidad anual proyectada ──
-    var paisIngProy = 0;
-    entries.forEach(function(entry) {
-      var pid = entry[0]; var pp = entry[1];
-      var montoMes = parseNum(pp.monto);
-      if (montoMes <= 0) return;
-      var esP = (pp.pais||'').toLowerCase().includes('paraguay');
-      var mLocal = esP ? 'PYG' : (pp.moneda || 'ARS');
-      var pays = getPayments(pid, year);
-      var tcP = getPropTCProm(pays, esP);
-      var mesUSD = pp.moneda === 'USD' ? montoMes : (tcP > 0 ? montoMes / tcP : 0);
-      paisIngProy += mesUSD * 12;
-    });
-    var paisRBProy = paisValorTotal > 0 && paisIngProy > 0 ? (paisIngProy / paisValorTotal * 100).toFixed(1) + '%' : '—';
-
-    // ── Tabla de propiedades del país ──
+    // ── Per-property rows using calcRentDesdeInicio (same source as all other panels) ──
     var propRows = entries.map(function(entry) {
       var pid = entry[0]; var pp = entry[1];
-      var pays = getPayments(pid, year);
-      var esP = (pp.pais||'').toLowerCase().includes('paraguay');
-      var mLocal = esP ? 'PYG' : (pp.moneda || 'ARS');
-      var tcP = getPropTCProm(pays, esP);
-      var valProp = VALORES_PROPIEDAD_USD[pid] || 0;
-
-      // Año
-      var ingA = 0, gasA = 0;
-      for (var mi2 = 0; mi2 < 12; mi2++) {
-        var mm = pays[mi2] || {};
-        var mo = parseNum(mm.monto); var tc2 = parseNum(mm.tc); var mp = mm.monedaPago || mLocal;
-        if (mm.estado === 'pagado' && mo > 0) ingA += getMontoUSD(mo, tc2, mp, mLocal, tcP);
-        getGastosMes(pid, year, mi2).forEach(function(g) {
-          var v = parseNum(g.monto); var cur = g.moneda || mLocal;
-          if (cur === 'USD') gasA += v; else if (tc2 > 0) gasA += Math.round(v/tc2); else if (tcP > 0) gasA += Math.round(v/tcP);
-        });
-      }
-      var netA = ingA - gasA;
-      var mesesPagadosA = 0;
-      for (var mi3 = 0; mi3 < 12; mi3++) { if ((pays[mi3]||{}).estado === 'pagado') mesesPagadosA++; }
-      var rbA  = valProp > 0 && ingA > 0 && mesesPagadosA > 0 ? (ingA/mesesPagadosA*12/valProp*100).toFixed(1)+'%' : '—';
-      var rnA  = valProp > 0 && ingA > 0 && mesesPagadosA > 0 ? (netA/mesesPagadosA*12/valProp*100).toFixed(1)+'%' : '—';
-      var rnAC = netA >= 0 ? '#2e7d52' : '#c0392b';
-
-      // Desde inicio
+      if (!pp.inicio) return null;
       var ri = calcRentDesdeInicio(pid);
-      var ingI = ri ? ri.totalIngUSD : 0; var gasI = ri ? ri.totalGasUSD : 0;
-      var netI = ingI - gasI;
-      var mesesI = ri ? ri.mesesContrato : 0;
-      var rbI  = valProp > 0 && ingI > 0 && mesesI > 0 ? (ingI/mesesI*12/valProp*100).toFixed(1)+'%' : '—';
-      var rnI  = valProp > 0 && ingI > 0 && mesesI > 0 ? (netI/mesesI*12/valProp*100).toFixed(1)+'%' : '—';
-      var rnIC = netI >= 0 ? '#2e7d52' : '#c0392b';
+      if (!ri || !ri.rows || ri.rows.length === 0) return null;
+      var val = VALORES_PROPIEDAD_USD[pid] || 0;
+      var ing = 0, gas = 0, mc = 0, mesesTot = 0;
 
-      // Proyectada
-      var montoMes = parseNum(pp.monto);
-      var mesUSD2 = pp.moneda === 'USD' ? montoMes : (tcP > 0 ? montoMes / tcP : 0);
-      var rbProy = valProp > 0 && mesUSD2 > 0 ? (mesUSD2*12/valProp*100).toFixed(1)+'%' : '—';
+      // ── IDENTICAL logic to renderDashRent ──
+      var rentB = null, rentN = null, neto = 0;
+      if (_paisMode === 'anio') {
+        var rows = ri.rows.filter(function(r){ return r.yr === year; });
+        ing  = rows.reduce(function(s,r){ return s+r.ingUSD; }, 0);
+        gas  = rows.reduce(function(s,r){ return s+r.gasUSD; }, 0);
+        neto = ing - gas;
+        mc   = rows.filter(function(r){ return r.estado==='pagado'; }).length;
+        mesesTot = rows.length;
+        if (val > 0 && mc > 0) {
+          rentB = (ing  / mc * 12) / val * 100;
+          rentN = (neto / mc * 12) / val * 100;
+        }
+      } else if (_paisMode === 'aniocontrato') {
+        var ac = ri.aniosContrato[ri.aniosContrato.length - 1];
+        if (!ac) return null;
+        ing = ac.ingUSD; gas = ac.gasUSD; neto = ac.netoUSD;
+        mc  = ac.mesesCobrados; mesesTot = ac.mesesTotal;
+        rentB = ac.rentBruta;   // already computed in calcRentDesdeInicio
+        rentN = ac.rentNeta;
+      } else {
+        ing  = ri.totalIngUSD; gas = ri.totalGasUSD; neto = ri.netoUSD;
+        mc   = ri.rows.filter(function(r){ return r.estado==='pagado'; }).length;
+        mesesTot = ri.rows.length;
+        if (val > 0 && mc > 0) {
+          rentB = (ing  / mc * 12) / val * 100;
+          rentN = (neto / mc * 12) / val * 100;
+        }
+      }
+
+      // Projected — always from contract amount × 12
+      var esP2   = (pp.pais||'').toLowerCase().includes('paraguay');
+      var pays2  = getPayments(pid, year);
+      var tcP2   = getPropTCP(pays2, esP2);
+      var monto2 = parseNum(pp.monto);
+      var mesUSD = pp.moneda === 'USD' ? monto2 : (tcP2 > 0 ? monto2/tcP2 : 0);
+      var rbProy = val > 0 && mesUSD > 0 ? (mesUSD*12/val*100).toFixed(1)+'%' : '—';
+
+      var rnC = rentN !== null ? (rentN >= 0 ? '#2e7d52' : '#c0392b') : '#9b9590';
+
+      paisIng      += ing;
+      paisGas      += gas;
+      paisValorTotal += val;
+      paisMesesCob += mc;
+      if (ing > 0 || gas > 0) paisPropCount++;
 
       return '<tr style="border-bottom:1px solid #e8e4dc;">' +
         '<td style="padding:9px 12px;font-weight:700;font-size:0.88rem;">' + (pp.nombre||pid) + '</td>' +
-        '<td style="padding:9px 12px;text-align:right;font-size:0.82rem;">' + (ingA > 0 ? 'USD '+Math.round(ingA).toLocaleString('es-AR') : '<span style="color:#9b9590">—</span>') + '</td>' +
-        '<td style="padding:9px 12px;text-align:center;font-weight:800;font-size:1rem;color:#1a3a6b;">' + rbA + '</td>' +
-        '<td style="padding:9px 12px;text-align:center;font-weight:800;font-size:1rem;color:' + rnAC + ';">' + rnA + '</td>' +
-        '<td style="padding:9px 12px;text-align:right;font-size:0.82rem;">' + (ingI > 0 ? 'USD '+Math.round(ingI).toLocaleString('es-AR')+'<br><span style="font-size:0.7rem;color:#9b9590;">'+mesesI+' meses</span>' : '<span style="color:#9b9590">—</span>') + '</td>' +
-        '<td style="padding:9px 12px;text-align:center;font-weight:800;font-size:1rem;color:#1a3a6b;">' + rbI + '</td>' +
-        '<td style="padding:9px 12px;text-align:center;font-weight:800;font-size:1rem;color:' + rnIC + ';">' + rnI + '</td>' +
-        '<td style="padding:9px 12px;text-align:center;font-weight:800;font-size:1rem;color:#1a5276;">' + rbProy + '</td>' +
-        '<td style="padding:9px 12px;text-align:right;font-size:0.78rem;color:#9b9590;">' + (valProp > 0 ? 'USD '+valProp.toLocaleString('es-AR') : '—') + '</td>' +
-        '</tr>';
-    }).join('');
+        '<td style="padding:9px 10px;text-align:right;font-size:0.82rem;color:#2e7d52;">' + (ing>0?'USD '+Math.round(ing).toLocaleString('es-AR'):'—') + '</td>' +
+        '<td style="padding:9px 10px;text-align:center;font-weight:800;font-size:1rem;color:#1a3a6b;">' + (rentB!==null?(rentB>=0?'+':'')+rentB.toFixed(1)+'%':'—') + '</td>' +
+        '<td style="padding:9px 10px;text-align:center;font-weight:800;font-size:1rem;color:' + rnC + ';">' + (rentN!==null?(rentN>=0?'+':'')+rentN.toFixed(1)+'%':'—') + '</td>' +
+        '<td style="padding:9px 10px;text-align:center;font-weight:800;font-size:1rem;color:#1a5276;">' + rbProy + '</td>' +
+        '<td style="padding:9px 10px;text-align:right;font-size:0.78rem;color:#9b9590;">' + (val>0?'USD '+val.toLocaleString('es-AR'):'—') + '</td>' +
+      '</tr>';
+    }).filter(Boolean).join('');
 
-    porPaisHTML +=
+    var paisNeto  = paisIng - paisGas;
+    var mP        = paisPropCount > 0 ? paisMesesCob / paisPropCount : Math.max(curMonth+1,1);
+    var paisRB    = paisValorTotal>0 && paisIng>0 && mP>0 ? (paisIng/mP*12/paisValorTotal*100).toFixed(1)+'%' : '—';
+    var paisRN    = paisValorTotal>0 && mP>0 ? (paisNeto/mP*12/paisValorTotal*100).toFixed(1)+'%' : '—';
+    var paisRNC   = paisNeto >= 0 ? '#2e7d52' : '#c0392b';
+
+    // Projected total for country
+    var paisProy = 0;
+    entries.forEach(function(e) {
+      var pid2=e[0]; var pp2=e[1];
+      var esP3=(pp2.pais||'').toLowerCase().includes('paraguay');
+      var pays3=getPayments(pid2,year); var tcP3=getPropTCP(pays3,esP3);
+      var m3=parseNum(pp2.monto); var u3=pp2.moneda==='USD'?m3:(tcP3>0?m3/tcP3:0);
+      paisProy += u3*12;
+    });
+    var paisRBProy = paisValorTotal>0&&paisProy>0 ? (paisProy/paisValorTotal*100).toFixed(1)+'%' : '—';
+
+    paisesHTML +=
       '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(26,24,20,0.07);">' +
-        // Header del país
+        // Header
         '<div style="padding:14px 18px;border-bottom:2px solid #e8e4dc;background:#faf9f7;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">' +
           '<div style="font-family:\'Playfair Display\',serif;font-weight:400;font-size:1.1rem;">' + flag + ' ' + pais + '</div>' +
           '<div style="font-size:0.75rem;color:#9b9590;font-weight:600;">' + entries.length + ' propiedad' + (entries.length!==1?'es':'') + ' · USD ' + paisValorTotal.toLocaleString('es-AR') + ' invertido</div>' +
         '</div>' +
-        // KPIs del país
+        // KPIs
         '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:1px solid #e8e4dc;">' +
           '<div style="padding:14px;text-align:center;border-right:1px solid #e8e4dc;">' +
-            '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9b9590;margin-bottom:4px;">Cobrado ' + year + '</div>' +
-            '<div style="font-size:1.1rem;font-weight:800;color:#2e7d52;">' + (paisIngAnio > 0 ? 'USD '+Math.round(paisIngAnio).toLocaleString('es-AR') : '—') + '</div>' +
-            '<div style="font-size:0.68rem;color:#9b9590;margin-top:2px;">Bruta: <b style="color:#1a3a6b;">' + paisRBAnio + '</b> · Neta: <b style="color:' + paisRNAnioC + ';">' + paisRNAnio + '</b></div>' +
+            '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9b9590;margin-bottom:4px;">Cobrado · ' + periodoKPI + '</div>' +
+            '<div style="font-size:1.2rem;font-weight:800;color:#2e7d52;">' + (paisIng>0?'USD '+Math.round(paisIng).toLocaleString('es-AR'):'—') + '</div>' +
           '</div>' +
           '<div style="padding:14px;text-align:center;border-right:1px solid #e8e4dc;">' +
-            '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9b9590;margin-bottom:4px;">Desde contrato</div>' +
-            '<div style="font-size:1.1rem;font-weight:800;color:#2e7d52;">' + (paisIngInicio > 0 ? 'USD '+Math.round(paisIngInicio).toLocaleString('es-AR') : '—') + '</div>' +
-            '<div style="font-size:0.68rem;color:#9b9590;margin-top:2px;">Bruta: <b style="color:#1a3a6b;">' + paisRBInicio + '</b> · Neta: <b style="color:' + paisRNInicioC + ';">' + paisRNInicio + '</b></div>' +
+            '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9b9590;margin-bottom:4px;">Rent. Bruta · ' + periodoKPI + '</div>' +
+            '<div style="font-size:1.4rem;font-weight:900;color:#1a3a6b;">' + paisRB + '</div>' +
           '</div>' +
           '<div style="padding:14px;text-align:center;">' +
-            '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9b9590;margin-bottom:4px;">Rent. Anual Proyectada</div>' +
-            '<div style="font-size:1.4rem;font-weight:900;color:#1a5276;">' + paisRBProy + '</div>' +
-            '<div style="font-size:0.68rem;color:#9b9590;margin-top:2px;">Contrato vigente × 12</div>' +
+            '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9b9590;margin-bottom:4px;">Rent. Neta · ' + periodoKPI + '</div>' +
+            '<div style="font-size:1.4rem;font-weight:900;color:' + paisRNC + ';">' + paisRN + '</div>' +
           '</div>' +
         '</div>' +
-        // Tabla por propiedad
+        // Table
         '<div style="overflow-x:auto;">' +
           '<table style="width:100%;border-collapse:collapse;font-size:0.8rem;">' +
             '<thead><tr style="background:#faf9f7;border-bottom:1px solid #e8e4dc;">' +
-              '<th style="padding:8px 12px;text-align:left;color:#9b9590;font-size:0.62rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Propiedad</th>' +
-              '<th style="padding:8px 10px;text-align:right;color:#9b9590;font-size:0.62rem;text-transform:uppercase;font-weight:700;">Cob. ' + year + '</th>' +
-              '<th style="padding:8px 10px;text-align:center;color:#1a3a6b;font-size:0.62rem;text-transform:uppercase;font-weight:700;">R.Bruta ' + year + '</th>' +
-              '<th style="padding:8px 10px;text-align:center;color:#2e7d52;font-size:0.62rem;text-transform:uppercase;font-weight:700;">R.Neta ' + year + '</th>' +
-              '<th style="padding:8px 10px;text-align:right;color:#9b9590;font-size:0.62rem;text-transform:uppercase;font-weight:700;">Cob. contrato</th>' +
-              '<th style="padding:8px 10px;text-align:center;color:#1a3a6b;font-size:0.62rem;text-transform:uppercase;font-weight:700;">R.Bruta total</th>' +
-              '<th style="padding:8px 10px;text-align:center;color:#2e7d52;font-size:0.62rem;text-transform:uppercase;font-weight:700;">R.Neta total</th>' +
+              '<th style="padding:8px 12px;text-align:left;color:#9b9590;font-size:0.62rem;text-transform:uppercase;font-weight:700;">Propiedad</th>' +
+              '<th style="padding:8px 10px;text-align:right;color:#2e7d52;font-size:0.62rem;text-transform:uppercase;font-weight:700;">Cobrado · ' + periodoKPI + '</th>' +
+              '<th style="padding:8px 10px;text-align:center;color:#1a3a6b;font-size:0.62rem;text-transform:uppercase;font-weight:700;">R.Bruta</th>' +
+              '<th style="padding:8px 10px;text-align:center;color:#2e7d52;font-size:0.62rem;text-transform:uppercase;font-weight:700;">R.Neta</th>' +
               '<th style="padding:8px 10px;text-align:center;color:#1a5276;font-size:0.62rem;text-transform:uppercase;font-weight:700;">Proyectada</th>' +
               '<th style="padding:8px 10px;text-align:right;color:#9b9590;font-size:0.62rem;text-transform:uppercase;font-weight:700;">Valor</th>' +
             '</tr></thead>' +
             '<tbody>' + propRows + '</tbody>' +
             '<tfoot><tr style="border-top:2px solid #e8e4dc;background:#faf9f7;">' +
               '<td style="padding:9px 12px;font-weight:700;">TOTAL</td>' +
-              '<td style="padding:9px 10px;text-align:right;font-weight:700;color:#2e7d52;">' + (paisIngAnio>0?'USD '+Math.round(paisIngAnio).toLocaleString('es-AR'):'—') + '</td>' +
-              '<td style="padding:9px 10px;text-align:center;font-weight:800;color:#1a3a6b;">' + paisRBAnio + '</td>' +
-              '<td style="padding:9px 10px;text-align:center;font-weight:800;color:' + paisRNAnioC + ';">' + paisRNAnio + '</td>' +
-              '<td style="padding:9px 10px;text-align:right;font-weight:700;color:#2e7d52;">' + (paisIngInicio>0?'USD '+Math.round(paisIngInicio).toLocaleString('es-AR'):'—') + '</td>' +
-              '<td style="padding:9px 10px;text-align:center;font-weight:800;color:#1a3a6b;">' + paisRBInicio + '</td>' +
-              '<td style="padding:9px 10px;text-align:center;font-weight:800;color:' + paisRNInicioC + ';">' + paisRNInicio + '</td>' +
+              '<td style="padding:9px 10px;text-align:right;font-weight:700;color:#2e7d52;">' + (paisIng>0?'USD '+Math.round(paisIng).toLocaleString('es-AR'):'—') + '</td>' +
+              '<td style="padding:9px 10px;text-align:center;font-weight:800;color:#1a3a6b;">' + paisRB + '</td>' +
+              '<td style="padding:9px 10px;text-align:center;font-weight:800;color:' + paisRNC + ';">' + paisRN + '</td>' +
               '<td style="padding:9px 10px;text-align:center;font-weight:800;color:#1a5276;">' + paisRBProy + '</td>' +
               '<td style="padding:9px 10px;text-align:right;font-size:0.78rem;color:#9b9590;">USD ' + paisValorTotal.toLocaleString('es-AR') + '</td>' +
             '</tr></tfoot>' +
@@ -3737,44 +3842,412 @@ function renderCentroComputos() {
       '</div>';
   });
 
-  porPaisHTML += '</div></div>';
+  paisesHTML += '</div>';
 
-  body.innerHTML =
-    kpiBar +
-    rentPortHTML +
-    porPaisHTML +
-    desdeInicioHTML +
-    '<div style="display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start;">' +
-      '<div>' +
-        '<h3 style="font-family:\'Playfair Display\',serif;font-weight:400;font-size:1.15rem;margin-bottom:14px;">Rendimiento individual</h3>' +
-        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">' +
-          propCardsHTML +
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;">' +
+      '<h3 style="font-family:\'Playfair Display\',serif;font-weight:400;font-size:1.15rem;margin:0;">🌎 Rentabilidad por País</h3>' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+        '<span style="font-size:0.78rem;color:#9b9590;">' + modoLabel + '</span>' +
+        '<div style="display:flex;gap:0;">' +
+          '<button id="pais-btn-anio" onclick="setPaisMode(\'anio\')"' +
+            ' style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;border-radius:8px 0 0 8px;background:' + (_paisMode==='anio'?'var(--accent)':'var(--surface)') + ';color:' + (_paisMode==='anio'?'#fff':'var(--text2)') + ';cursor:pointer;font-family:inherit;transition:all 0.15s;">📅 Año en curso</button>' +
+          '<button id="pais-btn-aniocontrato" onclick="setPaisMode(\'aniocontrato\')"' +
+            ' style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;background:' + (_paisMode==='aniocontrato'?'var(--accent)':'var(--surface)') + ';color:' + (_paisMode==='aniocontrato'?'#fff':'var(--text2)') + ';cursor:pointer;font-family:inherit;transition:all 0.15s;">📆 Año contractual</button>' +
+          '<button id="pais-btn-contrato" onclick="setPaisMode(\'contrato\')"' +
+            ' style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-radius:0 8px 8px 0;background:' + (_paisMode==='contrato'?'var(--accent)':'var(--surface)') + ';color:' + (_paisMode==='contrato'?'#fff':'var(--text2)') + ';cursor:pointer;font-family:inherit;transition:all 0.15s;">📋 Desde contrato</button>' +
         '</div>' +
       '</div>' +
-      '<div style="position:sticky;top:76px;">' +
-        '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(26,24,20,0.07);">' +
-          '<div style="padding:14px 16px;border-bottom:1px solid #e8e4dc;background:#faf9f7;">' +
-            '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#9b9590;">Portfolio mensual ' + (ccMode === 'contrato' ? 'mes actual' : year) + '</div>' +
-            '<div style="font-size:0.82rem;color:#5c574e;margin-top:2px;">Todos los deptos. en USD</div>' +
-          '</div>' +
-          '<table style="width:100%;border-collapse:collapse;font-size:0.82rem;">' +
-            '<thead><tr style="background:#faf9f7;">' +
-              '<th style="padding:8px 12px;text-align:left;font-size:0.65rem;text-transform:uppercase;color:#9b9590;font-weight:700;">Mes</th>' +
-              '<th style="padding:8px 12px;text-align:right;font-size:0.65rem;text-transform:uppercase;color:#2e7d52;font-weight:700;">💰 Ing.</th>' +
-              '<th style="padding:8px 12px;text-align:right;font-size:0.65rem;text-transform:uppercase;color:#c0392b;font-weight:700;">🧾 Gas.</th>' +
-              '<th style="padding:8px 12px;text-align:right;font-size:0.65rem;text-transform:uppercase;color:#1a3a6b;font-weight:700;">📊 Neto</th>' +
-            '</tr></thead>' +
-            '<tbody>' + tablaFilasHTML + '</tbody>' +
-            '<tfoot><tr style="border-top:2px solid #e8e4dc;background:#faf9f7;">' +
-              '<td style="padding:10px 12px;font-weight:700;font-size:0.82rem;">TOTAL</td>' +
-              '<td style="padding:10px 12px;text-align:right;font-weight:700;color:#2e7d52;">' + usdFmt(portIngAnio) + '</td>' +
-              '<td style="padding:10px 12px;text-align:right;font-weight:700;color:#c0392b;">' + usdFmt(portGasAnio) + '</td>' +
-              '<td style="padding:10px 12px;text-align:right;font-weight:700;color:' + netoAnioC + ';">' + usdFmtSigned(portNetoAnio) + '</td>' +
-            '</tr></tfoot>' +
-          '</table>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
+    '</div>' +
+    paisesHTML;
+}
+
+
+/* ═══════════════════════════════════════════════
+   GRÁFICO DE RENTABILIDAD — DASHBOARD INVERSIÓN
+═══════════════════════════════════════════════ */
+var _invChartInstance   = null;
+var _invChartActiveProps = {}; // { propId: true/false, 'TOTAL': true/false }
+
+const INV_COLORS = {
+  'irigoyen':     { real: '#1a3a6b', est: '#7a9fd4', bruta: '#4a7fc1' },
+  'holmer':       { real: '#2e7d52', est: '#8ecfab', bruta: '#5eb87a' },
+  'phmelo':       { real: '#b35c00', est: '#f0b87a', bruta: '#d47a20' },
+  'lovemolas':    { real: '#7b2d8b', est: '#c98bd4', bruta: '#a050b8' },
+  'grandchelsea': { real: '#c0392b', est: '#f0908a', bruta: '#e05a50' },
+  'TOTAL':        { real: '#0f2547', est: '#5a7ab0', bruta: '#1a3a6b' },
+};
+const INV_LABELS = {
+  'irigoyen': 'Yrigoyen', 'holmer': 'Holmberg', 'phmelo': 'PH Melo',
+  'lovemolas': 'Molas Tower', 'grandchelsea': 'Grand Chelsea', 'TOTAL': 'Total Portfolio'
+};
+
+function _invGetTC(propId, yr, mi) {
+  const pays = getPayments(propId, yr);
+  const tc = parseNum((pays[mi]||{}).tc);
+  if (tc > 0) return tc;
+  const esP = (getProperties()[propId]?.pais||'').toLowerCase().includes('paraguay');
+  const tbl = esP ? {
+    2024:[7300,7350,7400,7450,7500,7550,7600,7650,7700,7750,7800,7900],
+    2025:[7300,7250,7200,7150,7100,7050,7000,7050,7100,6950,6800,6500],
+    2026:[6500,6450,6520,6500,6480,6460,6440,6420,6400,6380,6360,6340],
+  } : {
+    2024:[1200,1150,1000,1040,1200,1300,1350,1300,1250,1200,1150,1100],
+    2025:[1150,1200,1250,1300,1320,1350,1380,1420,1480,1520,1550,1500],
+    2026:[1450,1405,1390,1390,1400,1410,1420,1430,1440,1450,1460,1470],
+  };
+  return (tbl[yr]||[])[mi] || 0;
+}
+function _invToUSD(monto, moneda, tc) {
+  if (!monto || monto <= 0) return 0;
+  if (moneda === 'USD') return monto;
+  return tc > 0 ? Math.round(monto / tc) : 0;
+}
+
+function initInvChartToggles() {
+  const el = document.getElementById('inv-chart-toggles');
+  if (!el) return;
+  const props = getProperties();
+  const propIds = Object.keys(VALORES_PROPIEDAD_USD);
+
+  // Init all active if empty
+  if (Object.keys(_invChartActiveProps).length === 0) {
+    propIds.forEach(id => { _invChartActiveProps[id] = true; });
+    _invChartActiveProps['TOTAL'] = true;
+  }
+
+  el.innerHTML = [...propIds, 'TOTAL'].map(id => {
+    const col   = INV_COLORS[id] || { real: '#888' };
+    const label = INV_LABELS[id] || (props[id]?.nombre || id);
+    const active = _invChartActiveProps[id];
+    return `<button onclick="toggleInvProp('${id}')" id="inv-tog-${id}"
+      style="display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:20px;border:2px solid ${col.real};
+             background:${active ? col.real : 'transparent'};color:${active ? '#fff' : col.real};
+             font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+      <span style="width:10px;height:10px;border-radius:50%;background:${active ? '#fff' : col.real};display:inline-block;"></span>
+      ${label}
+    </button>`;
+  }).join('');
+}
+
+function toggleInvProp(id) {
+  _invChartActiveProps[id] = !_invChartActiveProps[id];
+  renderInvChart();
+}
+
+function renderInvChart() {
+  const card = document.getElementById('inv-chart-card');
+  if (!card) return;
+  card.style.display = 'block';
+  const canvas = document.getElementById('inv-chart-canvas');
+  if (!canvas) return;
+
+  const tipo    = document.getElementById('inv-chart-tipo')?.value || 'neta';
+  const props   = getProperties();
+  const now     = new Date();
+  const year    = parseInt(document.getElementById('cc-year')?.value || now.getFullYear());
+  const MESES_L = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  initInvChartToggles();
+  const allIds = Object.keys(VALORES_PROPIEDAD_USD);
+
+  // ── DATASETS ──────────────────────────────────────────────────
+  // Use calcRentDesdeInicio as SINGLE source of truth (same as all other panels)
+  let datasets = [];
+  let labels   = [];
+
+  // ══════════════════════════════════
+  // MODO: AÑO EN CURSO
+  // ══════════════════════════════════
+  if (ccMode === 'calendario') {
+    const maxMes = now.getFullYear() === year ? now.getMonth() : 11;
+    labels = MESES_L;
+
+    allIds.forEach(propId => {
+      if (!_invChartActiveProps[propId]) return;
+      const p   = props[propId] || {};
+      const val = VALORES_PROPIEDAD_USD[propId] || 0;
+      const col = INV_COLORS[propId] || { real:'#888', est:'#bbb' };
+      const lbl = INV_LABELS[propId] || (p.nombre || propId);
+      const ri  = calcRentDesdeInicio(propId);
+      if (!ri || !val) return;
+
+      // Estimada: monto contrato annualizado / valor (from ri context)
+      const estVal = _invEstPct(propId, ri);
+
+      const realArr = Array(12).fill(null);
+      const estArr  = Array(12).fill(estVal); // flat line
+
+      for (let mi = 0; mi <= maxMes; mi++) {
+        const row = ri.rows.find(r => r.yr === year && r.mi === mi);
+        if (!row || row.estado !== 'pagado') continue;
+        const net = tipo === 'neta' ? (row.ingUSD - row.gasUSD) : row.ingUSD;
+        realArr[mi] = net / val * 100 * 12;
+      }
+      datasets.push(_ds(lbl + ' Real',     realArr,          col.real, false, 2.5, 3));
+      datasets.push(_ds(lbl + ' Estimada', estArr,           col.est,  true,  1.5, 1));
+    });
+
+    // Total portfolio
+    if (_invChartActiveProps['TOTAL']) {
+      const totVal = allIds.reduce((s,id) => s + (VALORES_PROPIEDAD_USD[id]||0), 0);
+      const totEst = _invTotalEstPct(allIds, props);
+      const totReal = Array(12).fill(null);
+      for (let mi = 0; mi <= maxMes; mi++) {
+        let tR = 0, hasR = false;
+        allIds.forEach(id => {
+          const ri2 = calcRentDesdeInicio(id);
+          if (!ri2) return;
+          const row = ri2.rows.find(r => r.yr === year && r.mi === mi);
+          if (!row || row.estado !== 'pagado') return;
+          hasR = true;
+          tR += tipo === 'neta' ? (row.ingUSD - row.gasUSD) : row.ingUSD;
+        });
+        totReal[mi] = totVal > 0 && hasR ? tR / totVal * 100 * 12 : null;
+      }
+      datasets.push(_ds('Total Portfolio Real',     totReal,               '#0f2547', false, 3.5, 4));
+      datasets.push(_ds('Total Portfolio Estimado', Array(12).fill(totEst),'#5a7ab0', true,  2,   1));
+    }
+    _buildInvChart(canvas, labels, datasets, 'Año ' + year);
+
+  // ══════════════════════════════════
+  // MODO: AÑO CONTRACTUAL
+  // ══════════════════════════════════
+  } else if (ccMode === 'aniocontrato') {
+    // X axis: use row labels from the longest ac
+    let bestLabels = Array(12).fill('').map((_,i) => 'M'+(i+1));
+    let bestLen = 0;
+    allIds.forEach(id => {
+      const ac = getACSeleccionado(id);
+      if (ac && ac.rows.length > bestLen) {
+        bestLen = ac.rows.length;
+        bestLabels = ac.rows.map(r => MESES_L[r.mi]+' '+r.yr);
+        while (bestLabels.length < 12) bestLabels.push('');
+      }
+    });
+    labels = bestLabels;
+
+    allIds.forEach(propId => {
+      if (!_invChartActiveProps[propId]) return;
+      const p   = props[propId] || {};
+      const val = VALORES_PROPIEDAD_USD[propId] || 0;
+      const col = INV_COLORS[propId] || { real:'#888', est:'#bbb' };
+      const lbl = INV_LABELS[propId] || (p.nombre || propId);
+      const ac  = getACSeleccionado(propId); // uses same function as all panels
+      if (!ac || !val) return;
+
+      // ac.rentBruta / ac.rentNeta already computed in calcRentDesdeInicio — use as flat estimada
+      const estVal = tipo === 'bruta' ? ac.rentBruta : null; // will recalc below
+      const realArr = Array(12).fill(null);
+      const estArr  = Array(12).fill(null);
+
+      // Estimada: monto contrato annualizado / valor
+      const ri2  = calcRentDesdeInicio(propId);
+      const eP   = _invEstPct(propId, ri2);
+      for (let i = 0; i < 12; i++) estArr[i] = eP;
+
+      ac.rows.forEach((r, idx) => {
+        if (idx >= 12) return;
+        if (r.estado !== 'pagado') return;
+        const net = tipo === 'neta' ? (r.ingUSD - r.gasUSD) : r.ingUSD;
+        realArr[idx] = val > 0 ? net / val * 100 * 12 : null;
+      });
+      datasets.push(_ds(lbl + ' Real',     realArr, col.real, false, 2.5, 3));
+      datasets.push(_ds(lbl + ' Estimada', estArr,  col.est,  true,  1.5, 1));
+    });
+
+    if (_invChartActiveProps['TOTAL']) {
+      const totVal = allIds.reduce((s,id) => s + (VALORES_PROPIEDAD_USD[id]||0), 0);
+      const totEst = _invTotalEstPct(allIds, props);
+      const totReal = Array(12).fill(null);
+      for (let idx = 0; idx < 12; idx++) {
+        let tR = 0, hasR = false;
+        allIds.forEach(id => {
+          const ac2 = getACSeleccionado(id);
+          if (!ac2 || idx >= ac2.rows.length) return;
+          const r = ac2.rows[idx];
+          if (r.estado !== 'pagado') return;
+          hasR = true;
+          tR += tipo === 'neta' ? (r.ingUSD - r.gasUSD) : r.ingUSD;
+        });
+        totReal[idx] = totVal > 0 && hasR ? tR / totVal * 100 * 12 : null;
+      }
+      datasets.push(_ds('Total Portfolio Real',     totReal,               '#0f2547', false, 3.5, 4));
+      datasets.push(_ds('Total Portfolio Estimado', Array(12).fill(totEst),'#5a7ab0', true,  2,   1));
+    }
+    _buildInvChart(canvas, labels, datasets, 'Año contractual');
+
+  // ══════════════════════════════════
+  // MODO: DESDE CONTRATO
+  // ══════════════════════════════════
+  } else {
+    // Build unified timeline from earliest contract start to today
+    let minDate = null;
+    allIds.forEach(id => {
+      const ri2 = calcRentDesdeInicio(id);
+      if (!ri2 || !ri2.rows.length) return;
+      const first = ri2.rows[0];
+      const d = new Date(first.yr, first.mi, 1);
+      if (!minDate || d < minDate) minDate = d;
+    });
+    if (!minDate) minDate = new Date(year, 0, 1);
+
+    // Build timeline
+    const timeline = [];
+    let cur = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    const endD = new Date(now.getFullYear(), now.getMonth(), 1);
+    while (cur <= endD) {
+      timeline.push({ yr: cur.getFullYear(), mi: cur.getMonth(), label: MESES_L[cur.getMonth()] + ' ' + cur.getFullYear() });
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    labels = timeline.map(t => t.label);
+
+    allIds.forEach(propId => {
+      if (!_invChartActiveProps[propId]) return;
+      const p   = props[propId] || {};
+      const val = VALORES_PROPIEDAD_USD[propId] || 0;
+      const col = INV_COLORS[propId] || { real:'#888', est:'#bbb' };
+      const lbl = INV_LABELS[propId] || (p.nombre || propId);
+      const ri  = calcRentDesdeInicio(propId);
+      if (!ri || !val) return;
+
+      const eP = _invEstPct(propId, ri);
+      const realArr = [], estArr = [];
+
+      // Build a lookup map from ri.rows for fast access
+      const rowMap = {};
+      ri.rows.forEach(r => { rowMap[r.yr + '-' + r.mi] = r; });
+
+      timeline.forEach(({ yr, mi }) => {
+        const row = rowMap[yr + '-' + mi];
+        if (!row) { realArr.push(null); estArr.push(null); return; }
+        estArr.push(eP);
+        if (row.estado !== 'pagado') { realArr.push(null); return; }
+        const net = tipo === 'neta' ? (row.ingUSD - row.gasUSD) : row.ingUSD;
+        realArr.push(val > 0 ? net / val * 100 * 12 : null);
+      });
+
+      datasets.push(_ds(lbl + ' Real',     realArr, col.real, false, 2.5, 2));
+      datasets.push(_ds(lbl + ' Estimada', estArr,  col.est,  true,  1.5, 1));
+    });
+
+    if (_invChartActiveProps['TOTAL']) {
+      const totVal = allIds.reduce((s,id) => s + (VALORES_PROPIEDAD_USD[id]||0), 0);
+      const totEst = _invTotalEstPct(allIds, props);
+      const totReal = [], totEstA = [];
+      timeline.forEach(({ yr, mi }) => {
+        totEstA.push(totEst);
+        let tR = 0, hasR = false;
+        allIds.forEach(id => {
+          const ri2 = calcRentDesdeInicio(id);
+          if (!ri2) return;
+          const row = ri2.rows.find(r => r.yr === yr && r.mi === mi);
+          if (!row || row.estado !== 'pagado') return;
+          hasR = true;
+          tR += tipo === 'neta' ? (row.ingUSD - row.gasUSD) : row.ingUSD;
+        });
+        totReal.push(totVal > 0 && hasR ? tR / totVal * 100 * 12 : null);
+      });
+      datasets.push(_ds('Total Portfolio Real',     totReal, '#0f2547', false, 3.5, 3));
+      datasets.push(_ds('Total Portfolio Estimado', totEstA, '#5a7ab0', true,  2,   1));
+    }
+    _buildInvChart(canvas, labels, datasets, 'Desde inicio de contrato');
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────
+function _ds(label, data, color, dashed, bw, pr) {
+  return {
+    label, data,
+    borderColor: color, backgroundColor: dashed ? 'transparent' : color + '18',
+    borderWidth: bw, borderDash: dashed ? [5,4] : [],
+    pointRadius: pr, pointHoverRadius: pr + 3,
+    tension: 0.35, fill: false, spanGaps: false
+  };
+}
+
+function _invEstPct(propId, ri) {
+  // Estimada = monto contrato mensual en USD × 12 / valor propiedad
+  // Use TC average from ri.rows (same data source as panels)
+  const p   = getProperties()[propId] || {};
+  const val = VALORES_PROPIEDAD_USD[propId] || 0;
+  const mc  = parseNum(p.monto);
+  if (!mc || !val) return null;
+  if (p.moneda === 'USD') return mc / val * 100 * 12;
+  // Average TC from all ri rows that have TC
+  if (!ri || !ri.rows.length) return null;
+  let tcSum = 0, tcCount = 0;
+  ri.rows.forEach(r => {
+    const tc = r.tc > 0 ? r.tc : (r.tcProm > 0 ? r.tcProm : 0);
+    if (tc > 0) { tcSum += tc; tcCount++; }
+  });
+  const tcAvg = tcCount > 0 ? tcSum / tcCount : 0;
+  if (!tcAvg) return null;
+  return (mc / tcAvg) / val * 100 * 12;
+}
+
+function _invTotalEstPct(allIds, props) {
+  // Sum of monthly contract amounts in USD × 12 / total valor
+  const totVal = allIds.reduce((s,id) => s + (VALORES_PROPIEDAD_USD[id]||0), 0);
+  if (!totVal) return null;
+  let totMonthlyUSD = 0;
+  allIds.forEach(id => {
+    const p = props[id] || {};
+    const ri = calcRentDesdeInicio(id);
+    const ep = _invEstPct(id, ri);
+    if (ep !== null) totMonthlyUSD += ep / 100 / 12 * (VALORES_PROPIEDAD_USD[id]||0);
+  });
+  return totMonthlyUSD > 0 ? totMonthlyUSD / totVal * 100 * 12 : null;
+}
+
+function _buildInvChart(canvas, labels, datasets, periodoLabel) {
+  if (_invChartInstance) { _invChartInstance.destroy(); _invChartInstance = null; }
+  const textCol = '#5c574e', gridCol = 'rgba(0,0,0,0.06)';
+  _invChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff', titleColor: '#1a1814', bodyColor: textCol,
+          borderColor: '#e8e4dc', borderWidth: 1, padding: 12,
+          filter: item => item.parsed.y !== null,
+          callbacks: {
+            title: items => periodoLabel + ' · ' + (items[0]?.label||''),
+            label: ctx => ctx.parsed.y === null ? null : '  ' + ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%'
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: gridCol },
+          ticks: { color: textCol, font: { size: 10, family: "'Plus Jakarta Sans',sans-serif" }, maxRotation: labels.length > 14 ? 45 : 0, maxTicksLimit: 18 }
+        },
+        y: {
+          grid: { color: gridCol },
+          ticks: { color: textCol, font: { size: 11, family: "'Plus Jakarta Sans',sans-serif" }, callback: v => v.toFixed(1) + '%' },
+          title: { display: true, text: 'Rentabilidad anualizada (%)', color: textCol, font: { size: 10 } }
+        }
+      }
+    }
+  });
+
+  // Leyenda
+  const legendEl = document.getElementById('inv-chart-legend');
+  if (!legendEl) return;
+  const allIds = [...Object.keys(VALORES_PROPIEDAD_USD), 'TOTAL'];
+  legendEl.innerHTML = allIds.filter(id => _invChartActiveProps[id]).map(id => {
+    const col = INV_COLORS[id] || { real: '#888', est: '#bbb' };
+    const lbl = INV_LABELS[id] || id;
+    return `<div style="display:flex;align-items:center;gap:7px;background:var(--bg);padding:5px 12px;border-radius:8px;font-size:0.75rem;">
+      <span style="font-weight:700;color:${col.real};">${lbl}</span>
+      <span style="width:22px;height:2.5px;background:${col.real};border-radius:2px;display:inline-block;"></span><span style="color:var(--text3);">Real</span>
+      <span style="width:22px;border-top:2px dashed ${col.est};display:inline-block;"></span><span style="color:var(--text3);">Est.</span>
+    </div>`;
+  }).join('');
 }
 
 
@@ -4684,9 +5157,8 @@ function setTableMode(mode) {
   const btnCon  = document.getElementById('toggle-anio-contrato');
   const lbl     = document.getElementById('table-mode-label');
   const thCob   = document.getElementById('th-cobrado-label');
-  const thBruta = document.getElementById('th-rent-bruta-label');
-  const thNeta  = document.getElementById('th-rent-neta-label');
-  const thProy  = document.getElementById('th-rent-proyectada');
+  const thRN    = document.getElementById('th-rent-neta-label');
+
   const acSel   = document.getElementById('table-aniocontrato-selector');
   const now     = new Date();
   const mesNombreActual = MESES[now.getMonth()];
@@ -4698,9 +5170,7 @@ function setTableMode(mode) {
     if (btnCal) { btnCal.style.background = 'var(--accent)'; btnCal.style.color = '#fff'; }
     if (lbl) lbl.textContent = 'Mostrando: enero – hoy ' + now.getFullYear();
     if (thCob)   thCob.textContent   = 'Cobrado ' + now.getFullYear();
-    if (thBruta) thBruta.textContent = 'Rent. Bruta a hoy (' + mesNombreActual + ')';
-    if (thNeta)  thNeta.textContent  = 'Rent. Neta a hoy (' + mesNombreActual + ')';
-    if (thProy)  thProy.textContent  = 'Rent. Anual Proyectada';
+    if (thRN)    thRN.textContent    = 'Rent. Neta ' + now.getFullYear();
   } else if (mode === 'aniocontrato') {
     if (btnAnioC) { btnAnioC.style.background = 'var(--accent)'; btnAnioC.style.color = '#fff'; }
     if (acSel) acSel.style.display = 'flex';
@@ -4709,16 +5179,12 @@ function setTableMode(mode) {
     const selText = document.getElementById('table-anio-num')?.options[document.getElementById('table-anio-num')?.selectedIndex]?.textContent || '';
     if (lbl) lbl.textContent = 'Mostrando: ' + selText;
     if (thCob)   thCob.textContent   = 'Cobrado ' + selText;
-    if (thBruta) thBruta.textContent = 'Rent. Bruta';
-    if (thNeta)  thNeta.textContent  = 'Rent. Neta';
-    if (thProy)  thProy.textContent  = 'Rent. Anual Proyectada';
+    if (thRN)    thRN.textContent    = 'Rent. Neta ' + selText;
   } else {
     if (btnCon) { btnCon.style.background = 'var(--accent)'; btnCon.style.color = '#fff'; }
     if (lbl) lbl.textContent = 'Mostrando: inicio de contrato → hoy';
     if (thCob)   thCob.textContent   = 'Cobrado (desde contrato)';
-    if (thBruta) thBruta.textContent = 'Rent. Bruta desde contrato';
-    if (thNeta)  thNeta.textContent  = 'Rent. Neta desde contrato';
-    if (thProy)  thProy.textContent  = 'Rent. Anual Proyectada';
+    if (thRN)    thRN.textContent    = 'Rent. Neta (desde contrato)';
   }
   renderAllPropsTable();
 }
@@ -4808,8 +5274,159 @@ function renderDashboard() {
   setTableMode(tableMode);
   // Preview en pozo
   renderDashPozoPreview();
-  // Gráfico rentabilidad
-  renderRentChart();
+}
+
+/* ═══════════════════════════════════════════════
+   PANEL RENTABILIDADES POR PROPIEDAD — DASHBOARD
+═══════════════════════════════════════════════ */
+var _dashRentMode = 'anio'; // 'anio' | 'aniocontrato' | 'contrato'
+
+function setDashRentMode(mode) {
+  // ── This is the MASTER sync for the whole investment dashboard ──
+  _dashRentMode = mode;
+
+  // 1. Update rentabilidad-por-propiedad buttons
+  const dBtns = { anio: 'drent-btn-anio', aniocontrato: 'drent-btn-aniocontrato', contrato: 'drent-btn-contrato' };
+  Object.entries(dBtns).forEach(([k, bid]) => {
+    const b = document.getElementById(bid);
+    if (!b) return;
+    b.style.background = k === mode ? 'var(--accent)' : 'var(--surface)';
+    b.style.color      = k === mode ? '#fff'          : 'var(--text2)';
+  });
+  const sub = document.getElementById('dash-rent-subtitle');
+  if (sub) sub.textContent = mode === 'anio' ? 'Año en curso · ' + new Date().getFullYear()
+    : mode === 'aniocontrato' ? 'Último año contractual' : 'Desde inicio de contrato';
+
+  // 2. Sync main CC toggle buttons (calendario = anio, else same)
+  const ccModeNew = mode === 'anio' ? 'calendario' : mode;
+  ccMode = ccModeNew;
+  const ccBtns = { calendario: 'cc-toggle-calendario', aniocontrato: 'cc-toggle-aniocontrato', contrato: 'cc-toggle-contrato' };
+  Object.entries(ccBtns).forEach(([k, bid]) => {
+    const b = document.getElementById(bid);
+    if (!b) return;
+    b.style.background = k === ccModeNew ? 'var(--accent)' : 'var(--surface)';
+    b.style.color      = k === ccModeNew ? '#fff'          : 'var(--text2)';
+  });
+  const yearSel = document.getElementById('cc-year');
+  const acSel   = document.getElementById('cc-aniocontrato-selector');
+  if (yearSel) yearSel.style.display = mode === 'anio' ? '' : 'none';
+  if (acSel)   acSel.style.display   = mode === 'aniocontrato' ? 'flex' : 'none';
+  if (mode === 'aniocontrato') populatePortfolioSelector('cc-anio-num');
+
+  // 3. Sync resultado-total buttons
+  _resMode = mode;
+  const rBtns = { anio: 'rt-btn-anio', aniocontrato: 'rt-btn-aniocontrato', contrato: 'rt-btn-contrato' };
+  Object.entries(rBtns).forEach(([k, bid]) => {
+    const b = document.getElementById(bid);
+    if (!b) return;
+    b.style.background = k === mode ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.1)';
+    b.style.color      = k === mode ? '#0f2547'               : 'rgba(255,255,255,0.6)';
+  });
+
+  // 4. Sync rentabilidad-por-país buttons
+  _paisMode = mode;
+  const pBtns = { anio: 'pais-btn-anio', aniocontrato: 'pais-btn-aniocontrato', contrato: 'pais-btn-contrato' };
+  Object.entries(pBtns).forEach(([k, bid]) => {
+    const b = document.getElementById(bid);
+    if (!b) return;
+    b.style.background = k === mode ? 'var(--accent)' : 'var(--surface)';
+    b.style.color      = k === mode ? '#fff'          : 'var(--text2)';
+  });
+
+  // 5. Re-render everything (renderCentroComputos calls renderPorPais internally)
+  renderDashRent();
+  renderResultadoTotal();
+  renderCentroComputos();
+}
+
+function renderDashRent() {
+  const grid = document.getElementById('dash-rent-grid');
+  if (!grid) return;
+  const props = getProperties();
+  const now   = new Date();
+  const yearNow = now.getFullYear();
+  const cards = [];
+
+  Object.entries(props).forEach(([id, p]) => {
+    if (!p.inicio) return;
+    const ri  = calcRentDesdeInicio(id);
+    if (!ri)  return;
+    const val = VALORES_PROPIEDAD_USD[id] || 0;
+    const sym = (p.moneda === 'USD') ? 'USD ' : (p.pais||'').toLowerCase().includes('paraguay') ? '₲ ' : '$ ';
+
+    let ingUSD = 0, gasUSD = 0, netoUSD = 0, rentB = null, rentN = null, rango = '', mesesCob = 0, mesesTot = 0;
+
+    if (_dashRentMode === 'anio') {
+      // Año calendario actual
+      const rows = ri.rows.filter(r => r.yr === yearNow);
+      ingUSD   = rows.reduce((s,r) => s + r.ingUSD, 0);
+      gasUSD   = rows.reduce((s,r) => s + r.gasUSD, 0);
+      netoUSD  = ingUSD - gasUSD;
+      mesesCob = rows.filter(r => r.estado === 'pagado').length;
+      mesesTot = rows.length;
+      rango    = yearNow.toString();
+      if (val > 0 && mesesCob > 0) {
+        rentB = (ingUSD  / mesesCob * 12) / val * 100;
+        rentN = (netoUSD / mesesCob * 12) / val * 100;
+      }
+    } else if (_dashRentMode === 'aniocontrato') {
+      // Último año contractual (el más reciente)
+      const ac = ri.aniosContrato[ri.aniosContrato.length - 1];
+      if (!ac) return;
+      ingUSD   = ac.ingUSD;  gasUSD = ac.gasUSD;  netoUSD = ac.netoUSD;
+      rentB    = ac.rentBruta;  rentN = ac.rentNeta;
+      mesesCob = ac.mesesCobrados;  mesesTot = ac.mesesTotal;
+      rango    = ac.rangoLabel;
+    } else {
+      // Desde inicio de contrato
+      ingUSD   = ri.totalIngUSD;  gasUSD = ri.totalGasUSD;  netoUSD = ri.netoUSD;
+      mesesCob = ri.rows.filter(r => r.estado === 'pagado').length;
+      mesesTot = ri.rows.length;
+      rango    = 'Desde ' + (p.inicio || '—');
+      if (val > 0 && mesesCob > 0) {
+        rentB = (ingUSD  / mesesCob * 12) / val * 100;
+        rentN = (netoUSD / mesesCob * 12) / val * 100;
+      }
+    }
+
+    const rbStr = rentB !== null ? (rentB >= 0 ? '+' : '') + rentB.toFixed(1) + '%' : '—';
+    const rnStr = rentN !== null ? (rentN >= 0 ? '+' : '') + rentN.toFixed(1) + '%' : '—';
+    const rnColor = rentN !== null && rentN < 0 ? 'var(--red)' : 'var(--green)';
+
+    cards.push(`
+      <div onclick="showProperty('${id}')" style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:box-shadow 0.15s;display:flex;flex-direction:column;gap:10px;"
+        onmouseover="this.style.boxShadow='0 4px 16px rgba(26,58,107,0.13)'" onmouseout="this.style.boxShadow=''">
+        <!-- Header -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+          <div>
+            <div style="font-family:'Sora',sans-serif;font-weight:800;font-size:0.98rem;color:var(--text);line-height:1.2;">${p.nombre||id}</div>
+            <div style="font-size:0.72rem;color:var(--text3);margin-top:2px;">${rango} · ${mesesCob}/${mesesTot} meses</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;">
+            <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);">Rent. Neta</div>
+            <div style="font-size:1.35rem;font-weight:800;color:${rnColor};line-height:1;">${rnStr}</div>
+            <div style="font-size:0.72rem;color:var(--text3);">bruta ${rbStr}</div>
+          </div>
+        </div>
+        <!-- Barra de datos -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:8px;border-top:1px solid var(--border);">
+          <div>
+            <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--green);margin-bottom:2px;">Cobrado</div>
+            <div style="font-size:0.88rem;font-weight:700;color:var(--green);">USD ${Math.round(ingUSD).toLocaleString('es-AR')}</div>
+          </div>
+          <div>
+            <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--red);margin-bottom:2px;">Gastos</div>
+            <div style="font-size:0.88rem;font-weight:700;color:var(--red);">USD ${Math.round(gasUSD).toLocaleString('es-AR')}</div>
+          </div>
+          <div>
+            <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin-bottom:2px;">Neto</div>
+            <div style="font-size:0.88rem;font-weight:700;color:var(--accent);">${netoUSD >= 0 ? '+' : ''}USD ${Math.round(netoUSD).toLocaleString('es-AR')}</div>
+          </div>
+        </div>
+      </div>`);
+  });
+
+  grid.innerHTML = cards.length ? cards.join('') : '<p style="color:var(--text3);font-size:0.88rem;">Sin datos de rentabilidad disponibles.</p>';
 }
 
 /* ═══════════════════════════════════════════════
@@ -5401,25 +6018,23 @@ function renderAllPropsTable() {
 
     let cobradoAcumStr, rentBrutaStr, rentNetaStr;
 
+    // ── Use calcRentDesdeInicio as SINGLE source of truth (same as dashboard) ──
+    const ri      = calcRentDesdeInicio(id);
+    const hasRI   = ri && ri.rows && ri.rows.length > 0;
+
     if (tableMode === 'contrato') {
-      // ── MODO CONTRATO: desde inicio de contrato (total acumulado) ──
-      const ri = calcRentDesdeInicio(id);
-      if (ri && ri.rows.length > 0) {
-        const mesesLabel = ri.mesesContrato + ' mes' + (ri.mesesContrato !== 1 ? 'es' : '');
+      if (hasRI) {
         cobradoAcumStr =
           '<span style="font-weight:700;color:var(--green);">USD ' + Math.round(ri.totalIngUSD).toLocaleString('es-AR') + '</span>' +
-          '<br><span style="font-size:0.72rem;color:var(--text3);">' + mesesLabel + ' · desde ' + formatDate(p.inicio) + '</span>';
-
+          '<br><span style="font-size:0.72rem;color:var(--text3);">' + ri.mesesContrato + ' meses · desde ' + formatDate(p.inicio) + '</span>';
         if (ri.totalIngUSD > 0 && valorUSD > 0 && ri.mesesContrato > 0) {
-          const pctB = Math.round((ri.totalIngUSD / ri.mesesContrato * 12) / valorUSD * 100);
-          rentBrutaStr = '<span style="font-size:1.35rem;font-weight:800;color:var(--accent);letter-spacing:-0.01em;">' + pctB + '%</span>' +
-            '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">anual · USD ' + Math.round(ri.totalIngUSD).toLocaleString('es-AR') + '</span>';
-          const pctN = Math.round((ri.netoUSD / ri.mesesContrato * 12) / valorUSD * 100);
-          const colorN = pctN >= 0 ? 'var(--green)' : 'var(--red)';
-          const gasDisp = ri.totalGasUSD > 0
-            ? '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">−USD ' + Math.round(ri.totalGasUSD).toLocaleString('es-AR') + ' gastos</span>'
-            : '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">sin gastos</span>';
-          rentNetaStr = '<span style="font-size:1.35rem;font-weight:800;color:' + colorN + ';letter-spacing:-0.01em;">' + pctN + '%</span>' + gasDisp;
+          const pctB = ((ri.totalIngUSD / ri.mesesContrato * 12) / valorUSD * 100).toFixed(1);
+          const pctN = ((ri.netoUSD    / ri.mesesContrato * 12) / valorUSD * 100).toFixed(1);
+          const colorN = parseFloat(pctN) >= 0 ? 'var(--green)' : 'var(--red)';
+          rentBrutaStr = '<span style="font-size:1.35rem;font-weight:800;color:var(--accent);">' + pctB + '%</span>' +
+            '<br><span style="font-size:0.72rem;color:var(--text3);">anual · USD ' + Math.round(ri.totalIngUSD).toLocaleString('es-AR') + '</span>';
+          rentNetaStr  = '<span style="font-size:1.35rem;font-weight:800;color:' + colorN + ';">' + pctN + '%</span>' +
+            (ri.totalGasUSD > 0 ? '<br><span style="font-size:0.72rem;color:var(--text3);">−USD ' + Math.round(ri.totalGasUSD).toLocaleString('es-AR') + ' gastos</span>' : '');
         } else {
           rentBrutaStr = '<span style="color:var(--text3);">—</span>';
           rentNetaStr  = '<span style="color:var(--text3);">—</span>';
@@ -5431,46 +6046,30 @@ function renderAllPropsTable() {
       }
 
     } else if (tableMode === 'aniocontrato') {
-      // ── MODO AÑO CONTRACTUAL: año seleccionado individualmente por prop ──
-      const ri = calcRentDesdeInicio(id);
-      const ac = getACSeleccionado(id);
-
+      const ac = hasRI ? getACSeleccionado(id) : null;
       if (ac) {
         const estadoBadgeAC = ac.cerrado
           ? '<span style="background:var(--accent-light);color:var(--accent);border-radius:10px;padding:1px 7px;font-size:0.68rem;font-weight:700;">✓</span>'
           : '<span style="background:var(--yellow-light);color:var(--yellow);border-radius:10px;padding:1px 7px;font-size:0.68rem;font-weight:700;">⏳</span>';
-
-        // Mini-selector de año para esta prop
-        const anioOpts = ri ? ri.aniosContrato.map(a => {
+        const anioOpts = ri.aniosContrato.map(a => {
           const sel = a.anioNum === ac.anioNum ? 'selected' : '';
           return `<option value="${a.anioNum}" ${sel}>${a.rangoLabel} ${a.cerrado?'✓':'⏳'}</option>`;
-        }).join('') : '';
-        const miniSel = anioOpts ? `<select
-          onclick="event.stopPropagation()"
-          onchange="setAnioSelProp('${id}', this.value, renderAllPropsTable)"
-          style="margin-top:3px;padding:2px 6px;border:1px solid var(--border2);border-radius:6px;font-size:0.72rem;font-weight:600;background:var(--surface);color:var(--text);cursor:pointer;font-family:inherit;max-width:100%;">
-          ${anioOpts}
-        </select>` : '';
-
+        }).join('');
         cobradoAcumStr =
           '<span style="font-weight:700;color:var(--green);">USD ' + Math.round(ac.ingUSD).toLocaleString('es-AR') + '</span>' +
           '<br>' + estadoBadgeAC + ' <span style="font-size:0.7rem;color:var(--text3);">' + ac.rangoLabel + '</span>' +
           '<br><span style="font-size:0.7rem;color:var(--text3);">' + ac.mesesCobrados + '/' + ac.mesesTotal + ' meses</span>';
-
         if (ac.rentBruta !== null && valorUSD > 0) {
-          rentBrutaStr = '<span style="font-size:1.35rem;font-weight:800;color:var(--accent);letter-spacing:-0.01em;">' + Math.round(ac.rentBruta) + '%</span>' +
-            '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">anual</span>';
           const colorN = ac.rentNeta !== null && ac.rentNeta >= 0 ? 'var(--green)' : 'var(--red)';
-          const gasDispAC = ac.gasUSD > 0
-            ? '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">−USD ' + Math.round(ac.gasUSD).toLocaleString('es-AR') + ' gastos</span>'
-            : '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">sin gastos</span>';
-          rentNetaStr = '<span style="font-size:1.35rem;font-weight:800;color:' + colorN + ';letter-spacing:-0.01em;">' + (ac.rentNeta !== null ? Math.round(ac.rentNeta) + '%' : '—') + '</span>' + gasDispAC;
+          rentBrutaStr = '<span style="font-size:1.35rem;font-weight:800;color:var(--accent);">' + ac.rentBruta.toFixed(1) + '%</span>' +
+            '<br><span style="font-size:0.72rem;color:var(--text3);">anual</span>';
+          rentNetaStr  = '<span style="font-size:1.35rem;font-weight:800;color:' + colorN + ';">' +
+            (ac.rentNeta !== null ? ac.rentNeta.toFixed(1) + '%' : '—') + '</span>' +
+            (ac.gasUSD > 0 ? '<br><span style="font-size:0.72rem;color:var(--text3);">−USD ' + Math.round(ac.gasUSD).toLocaleString('es-AR') + ' gastos</span>' : '');
         } else {
           rentBrutaStr = '<span style="color:var(--text3);">—</span>';
           rentNetaStr  = '<span style="color:var(--text3);">—</span>';
         }
-        // Inject mini select into name cell directly (done above), not in cobrado
-        // cobradoAcumStr stays clean
       } else {
         cobradoAcumStr = '<span style="color:var(--text3);font-size:0.8rem;">Sin inicio de contrato</span>';
         rentBrutaStr   = '<span style="color:var(--text3);">—</span>';
@@ -5478,82 +6077,36 @@ function renderAllPropsTable() {
       }
 
     } else {
-      // ── MODO CALENDARIO: año en curso ──
-      const needsTC_noData = needsTC && tcRef <= 0;
-      let totalCobradoAnioUSD = 0, mesesConPago = 0;
-      for (let mi = 0; mi < 12; mi++) {
-        const mp    = pays[mi] || {};
-        const v     = parseNum(mp.monto);
-        const tc2   = parseNum(mp.tc);
-        const mpago = mp.monedaPago || moneda;
-        if (v > 0 && mp.estado === 'pagado') {
-          const tcUsar = tc2 > 0 ? tc2 : tcPromAnio;
-          const usd = toUSD(v, mpago, tcUsar);
-          if (usd !== null) { totalCobradoAnioUSD += usd; mesesConPago++; }
+      // año calendario — use ri.rows filtered to current year (same as renderDashRent)
+      if (hasRI) {
+        const rows = ri.rows.filter(r => r.yr === year);
+        const ingAnio  = rows.reduce((s,r) => s + r.ingUSD, 0);
+        const gasAnio  = rows.reduce((s,r) => s + r.gasUSD, 0);
+        const mesesCob = rows.filter(r => r.estado === 'pagado').length;
+        cobradoAcumStr = ingAnio > 0
+          ? '<span style="font-weight:700;color:var(--green);">USD ' + Math.round(ingAnio).toLocaleString('es-AR') + '</span>' +
+            '<br><span style="font-size:0.72rem;color:var(--text3);">' + mesesCob + ' meses cobrados</span>'
+          : '<span style="color:var(--text3);">Sin cobros</span>';
+        if (ingAnio > 0 && valorUSD > 0 && mesesCob > 0) {
+          const pctB   = ((ingAnio / mesesCob * 12) / valorUSD * 100).toFixed(1);
+          const netoA  = ingAnio - gasAnio;
+          const pctN   = ((netoA   / mesesCob * 12) / valorUSD * 100).toFixed(1);
+          const colorN = parseFloat(pctN) >= 0 ? 'var(--green)' : 'var(--red)';
+          rentBrutaStr = '<span style="font-size:1.35rem;font-weight:800;color:var(--accent);">' + pctB + '%</span>' +
+            '<br><span style="font-size:0.72rem;color:var(--text3);">anual · USD ' + Math.round(ingAnio).toLocaleString('es-AR') + '</span>';
+          rentNetaStr  = '<span style="font-size:1.35rem;font-weight:800;color:' + colorN + ';">' + pctN + '%</span>' +
+            (gasAnio > 0 ? '<br><span style="font-size:0.72rem;color:var(--text3);">−USD ' + Math.round(gasAnio).toLocaleString('es-AR') + ' gastos</span>' : '');
+        } else {
+          rentBrutaStr = '<span style="color:var(--text3);">—</span>';
+          rentNetaStr  = '<span style="color:var(--text3);">—</span>';
         }
-      }
-
-      if (mesesConPago > 0) {
-        cobradoAcumStr =
-          '<span style="font-weight:700;color:var(--green);">USD ' + Math.round(totalCobradoAnioUSD).toLocaleString('es-AR') + '</span>' +
-          '<br><span style="font-size:0.72rem;color:var(--text3);">' + mesesConPago + ' mes' + (mesesConPago !== 1 ? 'es' : '') + ' cobrado' + (mesesConPago !== 1 ? 's' : '') + '</span>';
-      } else if (needsTC_noData) {
-        cobradoAcumStr = '<span style="color:var(--text3);font-size:0.8rem;">Cargá TC</span>';
       } else {
-        cobradoAcumStr = '<span style="color:var(--text3);">Sin cobros</span>';
-      }
-
-      const totalGastosAnioUSD = getGastos(id, year).reduce((acc, g) => {
-        const v   = parseNum(g.monto);
-        const cur = g.moneda || moneda;
-        const gMesIdx = g.mes !== undefined ? parseInt(g.mes) : -1;
-        const gTC = gMesIdx >= 0 ? (parseNum((pays[gMesIdx] || {}).tc) || tcRef) : tcRef;
-        const usd = toUSD(v, cur, gTC);
-        return acc + (usd !== null ? usd : 0);
-      }, 0);
-
-      // Anualizado: promedio mensual cobrado × 12 / valor
-      rentBrutaStr = (totalCobradoAnioUSD > 0 && valorUSD > 0 && mesesConPago > 0)
-        ? (() => {
-            const pct = Math.round((totalCobradoAnioUSD / mesesConPago * 12) / valorUSD * 100);
-            return '<span style="font-size:1.35rem;font-weight:800;color:var(--accent);letter-spacing:-0.01em;">' + pct + '%</span>' +
-                   '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">anual · USD ' + Math.round(totalCobradoAnioUSD).toLocaleString('es-AR') + '</span>';
-          })()
-        : '<span style="color:var(--text3);">—</span>';
-
-      const rentNetaAnioUSD = totalCobradoAnioUSD - totalGastosAnioUSD;
-      rentNetaStr = (totalCobradoAnioUSD > 0 && valorUSD > 0 && mesesConPago > 0)
-        ? (() => {
-            const pct   = Math.round((rentNetaAnioUSD / mesesConPago * 12) / valorUSD * 100);
-            const color = pct >= 0 ? 'var(--green)' : 'var(--red)';
-            const gasDisplay = totalGastosAnioUSD > 0
-              ? '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">−USD ' + Math.round(totalGastosAnioUSD).toLocaleString('es-AR') + ' gastos</span>'
-              : '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">sin gastos</span>';
-            return '<span style="font-size:1.35rem;font-weight:800;color:' + color + ';letter-spacing:-0.01em;">' + pct + '%</span>' + gasDisplay;
-          })()
-        : '<span style="color:var(--text3);">—</span>';
-    }
-
-    // ── Rentabilidad ANUAL PROYECTADA ──
-    // Monto mensual del contrato × 12 / valor propiedad
-    // Convertir monto del contrato a USD usando TC promedio
-    let rentProyStr = '<span style="color:var(--text3);">—</span>';
-    const montoContrato = parseNum(p.monto);
-    if (montoContrato > 0 && valorUSD > 0) {
-      let montoMensualUSD = 0;
-      if (moneda === 'USD') {
-        montoMensualUSD = montoContrato;
-      } else if (tcPromAnio > 0) {
-        montoMensualUSD = montoContrato / tcPromAnio;
-      }
-      if (montoMensualUSD > 0) {
-        const ingresoAnualUSD = montoMensualUSD * 12;
-        const pctProy = (ingresoAnualUSD / valorUSD * 100).toFixed(1);
-        rentProyStr =
-          '<span style="font-size:1.35rem;font-weight:800;color:var(--blue);letter-spacing:-0.01em;">' + pctProy + '%</span>' +
-          '<br><span style="font-size:0.72rem;font-weight:500;color:var(--text3);">USD ' + Math.round(montoMensualUSD).toLocaleString('es-AR') + '/mes × 12</span>';
+        cobradoAcumStr = '<span style="color:var(--text3);">Sin inicio de contrato</span>';
+        rentBrutaStr   = '<span style="color:var(--text3);">—</span>';
+        rentNetaStr    = '<span style="color:var(--text3);">—</span>';
       }
     }
+
 
         return '<tr>' +
       '<td><button class="link-btn" onclick="goToProperty(\'' + id + '\')" style="font-weight:600;font-size:1rem;text-align:left">' + p.nombre + '</button><br>' +
@@ -5575,9 +6128,7 @@ function renderAllPropsTable() {
       '<td>' + estadoBadge + '</td>' +
       '<td>' + payBadge + '</td>' +
       '<td class="col-hide-mobile">' + cobradoAcumStr + '</td>' +
-      '<td class="col-hide-mobile">' + rentBrutaStr + '</td>' +
       '<td class="col-hide-mobile">' + rentNetaStr + '</td>' +
-      '<td class="col-hide-mobile">' + rentProyStr + '</td>' +
       '<td class="col-hide-mobile"><span style="font-weight:600;color:var(--text2);">USD ' + (valorUSD||0).toLocaleString('es-AR') + '</span></td>' +
       '<td style="text-align:center;white-space:nowrap;">' +
         '<button onclick="goToProperty(\'' + id + '\')" class="btn btn-ghost btn-sm" style="padding:5px 12px;font-size:0.78rem;font-weight:700;color:var(--accent);border:1.5px solid var(--accent-light);margin-right:4px;" title="Ver detalle">Ver →</button>' +
@@ -5598,12 +6149,35 @@ function goToProperty(id) {
 /* ═══════════════════════════════════════════════
    COUNTRY PROPS
 ═══════════════════════════════════════════════ */
+var _countryMode = 'contrato';
+var _currentCountry = '';
+
+function setCountryMode(mode) {
+  _countryMode = mode;
+  const btns = { anio: 'sc-btn-anio', aniocontrato: 'sc-btn-aniocontrato', contrato: 'sc-btn-contrato' };
+  Object.entries(btns).forEach(([k, bid]) => {
+    const b = document.getElementById(bid);
+    if (!b) return;
+    b.style.background = k === mode ? 'var(--accent)' : 'var(--surface)';
+    b.style.color      = k === mode ? '#fff'          : 'var(--text2)';
+  });
+  renderCountryProps(_currentCountry);
+}
+
 function renderCountryProps(country) {
-  const props = getProperties();
+  _currentCountry = country;
+  const props    = getProperties();
   const filtered = Object.entries(props).filter(([,p]) => p.pais === country);
-  const container = document.getElementById('country-props');
+  const container     = document.getElementById('country-props');
+  const summaryEl     = document.getElementById('country-rent-summary');
+  const tableEl       = document.getElementById('country-props-table');
+  if (!container) return;
+
+  // Basic cards (unchanged)
   if (filtered.length === 0) {
     container.innerHTML = '<p style="color:var(--text3)">No hay propiedades para este país.</p>';
+    if (summaryEl) summaryEl.innerHTML = '';
+    if (tableEl)   tableEl.innerHTML   = '';
     return;
   }
   container.innerHTML = filtered.map(([id, p]) => {
@@ -5614,15 +6188,104 @@ function renderCountryProps(country) {
         <div class="prop-addr">📍 ${p.direccion}</div>
         ${estadoBadge}
         <div class="prop-meta">
-          <div class="prop-tenant">
-            <strong>Inquilino</strong>
-            ${p.inquilino || '—'}
-          </div>
+          <div class="prop-tenant"><strong>Inquilino</strong>${p.inquilino || '—'}</div>
           <span style="color:var(--accent); font-size:1.2rem;">→</span>
         </div>
-      </div>
-    `;
+      </div>`;
   }).join('');
+
+  // ── Rentabilidad summary table ──
+  if (!tableEl) return;
+  const now    = new Date();
+  const year   = now.getFullYear();
+  const MESES_L= ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  let totalIng = 0, totalGas = 0, totalValor = 0, totalMesesCob = 0, propCount = 0;
+  const rows = filtered.map(([id, p]) => {
+    if (!p.inicio) return null;
+    const ri  = calcRentDesdeInicio(id);
+    if (!ri || !ri.rows || ri.rows.length === 0) return null;
+    const val = VALORES_PROPIEDAD_USD[id] || 0;
+    let ingUSD = 0, gasUSD = 0, mesesCob = 0, mesesTot = 0, rangoLabel = '';
+
+    if (_countryMode === 'anio') {
+      const rr = ri.rows.filter(r => r.yr === year);
+      ingUSD   = rr.reduce((s,r) => s + r.ingUSD, 0);
+      gasUSD   = rr.reduce((s,r) => s + r.gasUSD, 0);
+      mesesCob = rr.filter(r => r.estado === 'pagado').length;
+      mesesTot = rr.length;
+      rangoLabel = 'Año ' + year;
+    } else if (_countryMode === 'aniocontrato') {
+      const ac = ri.aniosContrato[ri.aniosContrato.length - 1];
+      if (!ac) return null;
+      ingUSD = ac.ingUSD; gasUSD = ac.gasUSD;
+      mesesCob = ac.mesesCobrados; mesesTot = ac.mesesTotal;
+      rangoLabel = ac.rangoLabel;
+    } else {
+      ingUSD   = ri.totalIngUSD; gasUSD = ri.totalGasUSD;
+      mesesCob = ri.rows.filter(r => r.estado === 'pagado').length;
+      mesesTot = ri.rows.length;
+      rangoLabel = ri.mesesContrato + ' meses';
+    }
+
+    const neto  = ingUSD - gasUSD;
+    const mb    = mesesCob > 0 ? mesesCob : 1;
+    const rentB = val > 0 && ingUSD > 0 ? (ingUSD / mb * 12 / val * 100) : null;
+    const rentN = val > 0 && mesesCob > 0 ? (neto / mb * 12 / val * 100) : null;
+    totalIng += ingUSD; totalGas += gasUSD; totalValor += val;
+    totalMesesCob += mesesCob; propCount++;
+
+    const cRN = rentN !== null ? (rentN >= 0 ? '#2e7d52' : '#c0392b') : '#9b9590';
+    return '<tr style="border-bottom:1px solid #e8e4dc;">' +
+      '<td style="padding:10px 12px;font-weight:700;">' + (p.nombre||id) + '</td>' +
+      '<td style="padding:10px 12px;font-size:0.8rem;color:#9b9590;">' + rangoLabel + '</td>' +
+      '<td style="padding:10px 12px;text-align:right;color:#2e7d52;font-weight:600;">' + (ingUSD > 0 ? 'USD '+Math.round(ingUSD).toLocaleString('es-AR') : '—') + '</td>' +
+      '<td style="padding:10px 12px;text-align:right;color:#c0392b;font-weight:600;">' + (gasUSD > 0 ? 'USD '+Math.round(gasUSD).toLocaleString('es-AR') : '—') + '</td>' +
+      '<td style="padding:10px 12px;text-align:right;font-weight:700;color:' + (neto>=0?'#1a3a6b':'#c0392b') + ';">' + (neto>=0?'+':'') + 'USD '+Math.round(neto).toLocaleString('es-AR') + '</td>' +
+      '<td style="padding:10px 12px;text-align:center;font-weight:800;font-size:1.05rem;color:#1a3a6b;">' + (rentB !== null ? (rentB>=0?'+':'') + rentB.toFixed(1) + '%' : '—') + '</td>' +
+      '<td style="padding:10px 12px;text-align:center;font-weight:800;font-size:1.05rem;color:' + cRN + ';">' + (rentN !== null ? (rentN>=0?'+':'') + rentN.toFixed(1) + '%' : '—') + '</td>' +
+      '<td style="padding:10px 12px;text-align:right;font-size:0.78rem;color:#9b9590;">' + (val > 0 ? 'USD '+val.toLocaleString('es-AR') : '—') + '</td>' +
+    '</tr>';
+  }).filter(Boolean);
+
+  const totalNeto   = totalIng - totalGas;
+  const mesesProm   = propCount > 0 ? totalMesesCob / propCount : 1;
+  const portRB = totalValor > 0 && totalIng > 0 && mesesProm > 0 ? (totalIng/mesesProm*12/totalValor*100).toFixed(1)+'%' : '—';
+  const portRN = totalValor > 0 && mesesProm > 0 ? (totalNeto/mesesProm*12/totalValor*100).toFixed(1)+'%' : '—';
+  const cPortRN = totalNeto >= 0 ? '#2e7d52' : '#c0392b';
+
+  const modoLabel = _countryMode === 'anio' ? 'Año en curso · ' + year
+    : _countryMode === 'aniocontrato' ? 'Último año contractual' : 'Desde inicio de contrato';
+
+  tableEl.innerHTML =
+    '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(26,24,20,0.07);">' +
+      '<div style="padding:12px 16px;border-bottom:1px solid #e8e4dc;background:#faf9f7;display:flex;align-items:center;justify-content:space-between;">' +
+        '<div style="font-size:0.8rem;font-weight:700;color:#1a3a6b;">📊 Rentabilidad · ' + modoLabel + '</div>' +
+        '<div style="font-size:0.75rem;color:#9b9590;">USD ' + totalValor.toLocaleString('es-AR') + ' invertido</div>' +
+      '</div>' +
+      '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.82rem;">' +
+        '<thead><tr style="background:#faf9f7;border-bottom:1px solid #e8e4dc;">' +
+          '<th style="padding:8px 12px;text-align:left;color:#9b9590;font-size:0.65rem;text-transform:uppercase;font-weight:700;">Propiedad</th>' +
+          '<th style="padding:8px 12px;text-align:left;color:#9b9590;font-size:0.65rem;text-transform:uppercase;font-weight:700;">Período</th>' +
+          '<th style="padding:8px 12px;text-align:right;color:#2e7d52;font-size:0.65rem;text-transform:uppercase;font-weight:700;">Cobrado</th>' +
+          '<th style="padding:8px 12px;text-align:right;color:#c0392b;font-size:0.65rem;text-transform:uppercase;font-weight:700;">Gastos</th>' +
+          '<th style="padding:8px 12px;text-align:right;color:#1a3a6b;font-size:0.65rem;text-transform:uppercase;font-weight:700;">Neto</th>' +
+          '<th style="padding:8px 12px;text-align:center;color:#1a3a6b;font-size:0.65rem;text-transform:uppercase;font-weight:700;">Rent. Bruta</th>' +
+          '<th style="padding:8px 12px;text-align:center;color:#2e7d52;font-size:0.65rem;text-transform:uppercase;font-weight:700;">Rent. Neta</th>' +
+          '<th style="padding:8px 12px;text-align:right;color:#9b9590;font-size:0.65rem;text-transform:uppercase;font-weight:700;">Valor</th>' +
+        '</tr></thead>' +
+        '<tbody>' + rows.join('') + '</tbody>' +
+        '<tfoot><tr style="border-top:2px solid #e8e4dc;background:#faf9f7;">' +
+          '<td colspan="2" style="padding:10px 12px;font-weight:700;">TOTAL</td>' +
+          '<td style="padding:10px 12px;text-align:right;font-weight:700;color:#2e7d52;">' + (totalIng>0?'USD '+Math.round(totalIng).toLocaleString('es-AR'):'—') + '</td>' +
+          '<td style="padding:10px 12px;text-align:right;font-weight:700;color:#c0392b;">' + (totalGas>0?'USD '+Math.round(totalGas).toLocaleString('es-AR'):'—') + '</td>' +
+          '<td style="padding:10px 12px;text-align:right;font-weight:700;color:' + (totalNeto>=0?'#1a3a6b':'#c0392b') + ';">' + (totalNeto>=0?'+':'')+'USD '+Math.round(totalNeto).toLocaleString('es-AR') + '</td>' +
+          '<td style="padding:10px 12px;text-align:center;font-weight:800;color:#1a3a6b;">' + portRB + '</td>' +
+          '<td style="padding:10px 12px;text-align:center;font-weight:800;color:' + cPortRN + ';">' + portRN + '</td>' +
+          '<td style="padding:10px 12px;text-align:right;font-size:0.78rem;color:#9b9590;">USD ' + totalValor.toLocaleString('es-AR') + '</td>' +
+        '</tr></tfoot>' +
+      '</table></div>' +
+    '</div>';
 }
 
 /* ═══════════════════════════════════════════════
@@ -7124,8 +7787,7 @@ function renderRentabilidad() {
 }
 function _renderRentabilidadDesdeInicio() {
   const body = document.getElementById('rentabilidad-body');
-  const ri = calcRentDesdeInicio(currentPropId);
-  const p  = getPropData(currentPropId);
+  const ri   = calcRentDesdeInicio(currentPropId);
   const valorUSD_prop = VALORES_PROPIEDAD_USD[currentPropId] || 0;
 
   if (!ri || ri.rows.length === 0) {
@@ -7133,31 +7795,20 @@ function _renderRentabilidadDesdeInicio() {
     return;
   }
 
-  // ── KPIs totales acumulados ──
-  const ri_netoC = ri.netoUSD >= 0 ? 'var(--accent)' : 'var(--red)';
-  const mesesCobradosTotal = ri.rows.filter(r => r.estado === 'pagado').length;
-  const ri_rentB = valorUSD_prop > 0 && ri.totalIngUSD > 0 && mesesCobradosTotal > 0
-    ? (ri.totalIngUSD / mesesCobradosTotal * 12 / valorUSD_prop * 100).toFixed(1) + '% anual' : '—';
-  const ri_rentN = valorUSD_prop > 0 && mesesCobradosTotal > 0
-    ? (ri.netoUSD / mesesCobradosTotal * 12 / valorUSD_prop * 100).toFixed(1) + '% anual' : '—';
-  const ri_rentNC = ri.netoUSD >= 0 ? 'var(--green)' : 'var(--red)';
-
-  // ── Generar secciones por año contractual ──
+  // Render each contractual year using the same template as aniocontrato
   const seccionesAnios = ri.aniosContrato.map(ac => {
-    const netoC = ac.netoUSD >= 0 ? 'var(--green)' : 'var(--red)';
+    const netoC      = ac.netoUSD >= 0 ? 'var(--accent)' : 'var(--red)';
+    const rbStr      = ac.rentBruta !== null ? (ac.rentBruta >= 0 ? '+' : '') + ac.rentBruta.toFixed(1) + '% anual' : '—';
+    const rnStr      = ac.rentNeta  !== null ? (ac.rentNeta  >= 0 ? '+' : '') + ac.rentNeta.toFixed(1)  + '% anual' : '—';
     const estadoBadge = ac.cerrado
-      ? '<span style="background:var(--accent-light);color:var(--accent);border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;">✓ Cerrado</span>'
-      : '<span style="background:var(--yellow-light);color:var(--yellow);border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;">⏳ En curso</span>';
-
-    const rbStr = ac.rentBruta !== null ? (ac.rentBruta >= 0 ? '+' : '') + ac.rentBruta.toFixed(1) + '%' : '—';
-    const rnStr = ac.rentNeta  !== null ? (ac.rentNeta  >= 0 ? '+' : '') + ac.rentNeta.toFixed(1)  + '%' : '—';
-    const rnC   = ac.rentNeta !== null && ac.rentNeta >= 0 ? 'var(--green)' : 'var(--red)';
+      ? '<span style="background:rgba(255,255,255,0.2);color:#fff;border-radius:20px;padding:3px 12px;font-size:0.78rem;font-weight:700;">✓ Cerrado</span>'
+      : `<span style="background:var(--yellow-light);color:var(--yellow);border-radius:20px;padding:3px 12px;font-size:0.78rem;font-weight:700;">⏳ En curso · ${ac.mesesCobrados}/${ac.mesesTotal} meses</span>`;
 
     const filas = ac.rows.map(r => {
       const neto = r.ingUSD - r.gasUSD;
       const bg   = r.estado === 'pagado' ? '#e8f5ee' : r.estado === 'vencido' ? '#fdecea' : 'transparent';
       return `<tr style="border-bottom:1px solid var(--border);background:${bg};">
-        <td style="padding:8px 12px;font-weight:600;">${r.label.split(' ')[0]} ${r.label.split(' ')[1]}</td>
+        <td style="padding:8px 12px;font-weight:600;">${r.label}</td>
         <td style="padding:8px 12px;text-align:right;">${r.ingUSD > 0 ? `<span style="font-weight:700;color:var(--green);">USD ${r.ingUSD.toLocaleString('es-AR')}</span>` : '<span style="color:var(--text3);">—</span>'}</td>
         <td style="padding:8px 12px;text-align:right;">${r.gasUSD > 0 ? `<span style="font-weight:700;color:var(--red);">USD ${r.gasUSD.toLocaleString('es-AR')}</span>` : '<span style="color:var(--text3);">—</span>'}</td>
         <td style="padding:8px 12px;text-align:right;">${(r.ingUSD > 0 || r.gasUSD > 0) ? `<span style="font-weight:700;color:${neto >= 0 ? 'var(--green)' : 'var(--red)'};">${neto >= 0 ? '+' : ''}USD ${neto.toLocaleString('es-AR')}</span>` : '<span style="color:var(--text3);">—</span>'}</td>
@@ -7166,98 +7817,45 @@ function _renderRentabilidadDesdeInicio() {
     }).join('');
 
     return `
-    <div style="margin-bottom:20px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
-      <!-- Header año contractual -->
-      <div style="background:var(--accent);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-weight:800;font-size:1rem;">Año ${ac.anioNum} del contrato</span>
-          <span style="font-size:0.78rem;opacity:0.8;">${ac.rangoLabel}</span>
-          ${estadoBadge}
+    <div style="margin-bottom:20px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);">
+      <div style="background:var(--accent);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <span style="font-weight:800;font-size:1rem;">${ac.rangoLabel}</span>
+          <span style="margin-left:8px;">${estadoBadge}</span>
         </div>
-        <div style="display:flex;gap:16px;align-items:center;">
-          <div style="text-align:right;">
-            <div style="font-size:0.65rem;opacity:0.7;text-transform:uppercase;letter-spacing:0.06em;">Rent. Bruta anual</div>
-            <div style="font-size:1.2rem;font-weight:900;">${rbStr}</div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:0.65rem;opacity:0.7;text-transform:uppercase;letter-spacing:0.06em;">Rent. Neta anual</div>
-            <div style="font-size:1.2rem;font-weight:900;color:${ac.rentNeta !== null && ac.rentNeta < 0 ? '#fca5a5' : '#a7f3d0'};">${rnStr}</div>
-          </div>
+        <div style="display:flex;gap:16px;">
+          <div style="text-align:right;"><div style="font-size:0.65rem;opacity:0.7;text-transform:uppercase;">Rent. Bruta</div><div style="font-size:1.2rem;font-weight:900;">${rbStr}</div></div>
+          <div style="text-align:right;"><div style="font-size:0.65rem;opacity:0.7;text-transform:uppercase;">Rent. Neta</div><div style="font-size:1.2rem;font-weight:900;color:${ac.rentNeta !== null && ac.rentNeta < 0 ? '#fca5a5' : '#a7f3d0'};">${rnStr}</div></div>
         </div>
       </div>
-      <!-- Subtotales del año -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--surface2);border-bottom:1px solid var(--border);">
-        <div style="padding:10px 14px;text-align:center;border-right:1px solid var(--border);">
-          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--green);margin-bottom:3px;">Cobrado</div>
-          <div style="font-weight:800;color:var(--green);">USD ${ac.ingUSD.toLocaleString('es-AR')}</div>
-          <div style="font-size:0.7rem;color:var(--text3);">${ac.mesesCobrados}/${ac.mesesTotal} meses</div>
-        </div>
-        <div style="padding:10px 14px;text-align:center;border-right:1px solid var(--border);">
-          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--red);margin-bottom:3px;">Gastos</div>
-          <div style="font-weight:800;color:var(--red);">${ac.gasUSD > 0 ? 'USD ' + ac.gasUSD.toLocaleString('es-AR') : '—'}</div>
-        </div>
-        <div style="padding:10px 14px;text-align:center;">
-          <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:3px;">Neto</div>
-          <div style="font-weight:800;color:${netoC};">${ac.netoUSD >= 0 ? '+' : ''}USD ${ac.netoUSD.toLocaleString('es-AR')}</div>
-        </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--surface2);border:1px solid var(--border);border-top:none;margin-bottom:0;">
+        <div style="padding:12px;text-align:center;border-right:1px solid var(--border);"><div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--green);margin-bottom:3px;">Cobrado</div><div style="font-weight:800;color:var(--green);">USD ${ac.ingUSD.toLocaleString('es-AR')}</div></div>
+        <div style="padding:12px;text-align:center;border-right:1px solid var(--border);"><div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--red);margin-bottom:3px;">Gastos</div><div style="font-weight:800;color:var(--red);">${ac.gasUSD > 0 ? 'USD ' + ac.gasUSD.toLocaleString('es-AR') : '—'}</div></div>
+        <div style="padding:12px;text-align:center;"><div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:3px;">Neto</div><div style="font-weight:800;color:${netoC};">${ac.netoUSD >= 0 ? '+' : ''}USD ${ac.netoUSD.toLocaleString('es-AR')}</div></div>
       </div>
-      <!-- Tabla mes a mes -->
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
-          <thead>
-            <tr style="background:var(--bg);border-bottom:1px solid var(--border);">
-              <th style="text-align:left;padding:8px 12px;color:var(--text3);font-size:0.7rem;text-transform:uppercase;font-weight:700;">Mes</th>
-              <th style="text-align:right;padding:8px 12px;color:var(--green);font-size:0.7rem;text-transform:uppercase;font-weight:700;">💰 Ingreso</th>
-              <th style="text-align:right;padding:8px 12px;color:var(--red);font-size:0.7rem;text-transform:uppercase;font-weight:700;">🧾 Gastos</th>
-              <th style="text-align:right;padding:8px 12px;color:var(--accent);font-size:0.7rem;text-transform:uppercase;font-weight:700;">📊 Neto</th>
-              <th style="text-align:center;padding:8px 12px;color:var(--text3);font-size:0.7rem;text-transform:uppercase;font-weight:700;">Estado</th>
-            </tr>
-          </thead>
+      <div style="overflow-x:auto;border:1px solid var(--border);border-top:none;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
+          <thead><tr style="background:var(--bg);border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:8px 12px;font-size:0.7rem;text-transform:uppercase;color:var(--text3);font-weight:700;">Mes</th>
+            <th style="text-align:right;padding:8px 12px;font-size:0.7rem;text-transform:uppercase;color:var(--green);font-weight:700;">💰 Ingreso</th>
+            <th style="text-align:right;padding:8px 12px;font-size:0.7rem;text-transform:uppercase;color:var(--red);font-weight:700;">🧾 Gastos</th>
+            <th style="text-align:right;padding:8px 12px;font-size:0.7rem;text-transform:uppercase;color:var(--accent);font-weight:700;">📊 Neto</th>
+            <th style="text-align:center;padding:8px 12px;font-size:0.7rem;text-transform:uppercase;color:var(--text3);font-weight:700;">Estado</th>
+          </tr></thead>
           <tbody>${filas}</tbody>
-          <tfoot>
-            <tr style="border-top:2px solid var(--border);background:var(--surface2);">
-              <td style="padding:8px 12px;font-weight:700;font-size:0.82rem;">SUBTOTAL AÑO ${ac.anioNum}</td>
-              <td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--green);">USD ${ac.ingUSD.toLocaleString('es-AR')}</td>
-              <td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--red);">${ac.gasUSD > 0 ? 'USD ' + ac.gasUSD.toLocaleString('es-AR') : '—'}</td>
-              <td style="padding:8px 12px;text-align:right;font-weight:700;color:${netoC};">${ac.netoUSD >= 0 ? '+' : ''}USD ${ac.netoUSD.toLocaleString('es-AR')}</td>
-              <td></td>
-            </tr>
-          </tfoot>
+          <tfoot><tr style="border-top:2px solid var(--border);background:var(--surface2);">
+            <td style="padding:8px 12px;font-weight:700;">TOTAL ${ac.rangoLabel}</td>
+            <td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--green);">USD ${ac.ingUSD.toLocaleString('es-AR')}</td>
+            <td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--red);">${ac.gasUSD > 0 ? 'USD ' + ac.gasUSD.toLocaleString('es-AR') : '—'}</td>
+            <td style="padding:8px 12px;text-align:right;font-weight:700;color:${netoC};">${ac.netoUSD >= 0 ? '+' : ''}USD ${ac.netoUSD.toLocaleString('es-AR')}</td>
+            <td></td>
+          </tr></tfoot>
         </table>
       </div>
     </div>`;
   }).join('');
 
-  body.innerHTML = `
-    <!-- KPIs resumen total acumulado -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;">
-      <div style="background:var(--green-light);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--green);font-weight:700;margin-bottom:5px;">Total cobrado</div>
-        <div style="font-size:1.35rem;font-weight:800;color:var(--green);">USD ${ri.totalIngUSD.toLocaleString('es-AR')}</div>
-        <div style="font-size:0.72rem;color:var(--text3);margin-top:3px;">${ri.mesesContrato} meses · ${ri.aniosContrato.length} año${ri.aniosContrato.length !== 1 ? 's' : ''} contractual${ri.aniosContrato.length !== 1 ? 'es' : ''}</div>
-      </div>
-      <div style="background:var(--red-light);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--red);font-weight:700;margin-bottom:5px;">Total gastos</div>
-        <div style="font-size:1.35rem;font-weight:800;color:var(--red);">USD ${ri.totalGasUSD.toLocaleString('es-AR')}</div>
-      </div>
-      <div style="background:${ri.netoUSD >= 0 ? 'var(--accent-light)' : 'var(--red-light)'};border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--accent);font-weight:700;margin-bottom:5px;">Resultado neto</div>
-        <div style="font-size:1.35rem;font-weight:800;color:${ri_netoC};">${ri.netoUSD >= 0 ? '+' : ''}USD ${ri.netoUSD.toLocaleString('es-AR')}</div>
-      </div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--text3);font-weight:700;margin-bottom:5px;">Rent. promedio anual</div>
-        <div style="display:flex;justify-content:center;gap:10px;align-items:baseline;">
-          <span style="font-size:1.2rem;font-weight:800;color:var(--accent);">${ri_rentB}</span>
-          <span style="font-size:0.72rem;color:var(--text3);">bruta</span>
-          <span style="font-size:1.2rem;font-weight:800;color:${ri_rentNC};">${ri_rentN}</span>
-          <span style="font-size:0.72rem;color:var(--text3);">neta</span>
-        </div>
-        ${valorUSD_prop > 0 ? `<div style="font-size:0.7rem;color:var(--text3);margin-top:3px;">Valor: USD ${valorUSD_prop.toLocaleString('es-AR')}</div>` : ''}
-      </div>
-    </div>
-
-    <!-- Secciones por año contractual -->
-    ${seccionesAnios}`;
+  body.innerHTML = seccionesAnios;
 }
 
 function _renderRentabilidadAnioContrato() {
@@ -7337,252 +7935,97 @@ function _renderRentabilidadAnioContrato() {
 
 function _renderRentabilidadAnual() {
   if (!currentPropId) return;
-  const year  = parseInt(document.getElementById('rent-year').value);
-  const pays  = getPayments(currentPropId, year);
-  const gastos = getGastos(currentPropId, year);
-  const p     = getPropData(currentPropId);
-  const moneda = p.moneda || 'ARS';
-  const body  = document.getElementById('rentabilidad-body');
-  const propPais = p.pais || '';
-  const esParaguay = propPais.toLowerCase().includes('paraguay');
-  const monedaLocalNombre = esParaguay ? 'PYG' : moneda;
+  const year = parseInt(document.getElementById('rent-year').value);
+  const body = document.getElementById('rentabilidad-body');
+  const ri   = calcRentDesdeInicio(currentPropId);
+  const valorUSD_prop = VALORES_PROPIEDAD_USD[currentPropId] || 0;
 
-  // ── Calcular TC promedio anual (para gastos sin TC de mes) ──
-  let tcSumAnio = 0, tcCountAnio = 0;
-  for (let mi = 0; mi < 12; mi++) {
-    const tc2 = parseFloat((pays[mi] || {}).tc || 0);
-    if (tc2 > 0) { tcSumAnio += tc2; tcCountAnio++; }
+  if (!ri || ri.rows.length === 0) {
+    body.innerHTML = '<div style="padding:20px;color:var(--text3);text-align:center;">No hay datos registrados para esta propiedad.</div>';
+    return;
   }
-  const tcPromAnio = tcCountAnio > 0 ? tcSumAnio / tcCountAnio : 0;
 
-  // ── TC de referencia por si el pago no tiene TC (ej: Holmberg paga en USD) ──
-  const TC_ARS_REF = {
-    2024:[1200,1150,1000,1040,1200,1300,1350,1300,1250,1200,1150,1100],
-    2025:[1150,1200,1250,1300,1320,1350,1380,1420,1480,1520,1550,1500],
-    2026:[1450,1405,1390,1390,1400,1410,1420,1430,1440,1450,1460,1470],
-  };
-  const TC_PYG_REF = {
-    2024:[7300,7350,7400,7450,7500,7550,7600,7650,7700,7750,7800,7900],
-    2025:[7300,7250,7200,7150,7100,7050,7000,7050,7100,6950,6800,6500],
-    2026:[6500,6450,6520,6500,6480,6460,6440,6420,6400,6380,6360,6340],
-  };
-  function getTCForMonth(mi) {
-    const tcPay = parseNum((pays[mi] || {}).tc);
-    if (tcPay > 0) return tcPay;
-    if (tcPromAnio > 0) return tcPromAnio;
-    // Fallback: tabla de referencia según país
-    const tbl = esParaguay ? TC_PYG_REF : TC_ARS_REF;
-    return (tbl[year] || [])[mi] || 0;
+  // Filter rows to selected year
+  const rows = ri.rows.filter(r => r.yr === year);
+  if (rows.length === 0) {
+    body.innerHTML = `<div style="padding:20px;color:var(--text3);text-align:center;">Sin datos para el año ${year}.</div>`;
+    return;
   }
-  let totalIngresosUSD = 0;
-  let totalGastosUSD   = 0;
 
-  const filasMeses = MESES.map((mes, i) => {
-    const m = pays[i] || {};
-    const monto     = parseNum(m.monto);
-    const tc        = parseNum(m.tc);
-    const monedaPago = m.monedaPago || monedaLocalNombre;
-    const estado    = m.estado || 'pendiente';
+  const ingUSD    = rows.reduce((s,r) => s + r.ingUSD, 0);
+  const gasUSD    = rows.reduce((s,r) => s + r.gasUSD, 0);
+  const netoUSD   = ingUSD - gasUSD;
+  const mesesCob  = rows.filter(r => r.estado === 'pagado').length;
+  const mesesTot  = rows.length;
+  const cerrado   = rows.length === 12;
+  const netoC     = netoUSD >= 0 ? 'var(--accent)' : 'var(--red)';
 
-    // ── Ingreso en USD ──
-    let ingresoUSD = 0;
-    let ingresoDisplay = '—';
-    if (monto > 0) {
-      if (monedaPago === 'USD') {
-        ingresoUSD = monto;
-        ingresoDisplay = `<span style="font-weight:700;color:var(--green);">USD ${monto.toLocaleString('es-AR')}</span>`;
-      } else if (tc > 0) {
-        ingresoUSD = Math.round(monto / tc);
-        ingresoDisplay = `<span style="color:var(--text3);font-size:0.82rem;">${monedaLocalNombre} ${monto.toLocaleString('es-AR')} →</span> <span style="font-weight:700;color:var(--green);">USD ${ingresoUSD.toLocaleString('es-AR')}</span>`;
-      } else {
-        ingresoDisplay = `<span style="color:var(--text3);font-size:0.82rem;">${monedaLocalNombre} ${monto.toLocaleString('es-AR')}</span> <span style="font-size:0.75rem;color:var(--yellow);">⚠ sin TC</span>`;
-      }
-    }
-    if (estado === 'pagado') totalIngresosUSD += ingresoUSD;
+  const rentB = valorUSD_prop > 0 && ingUSD > 0 && mesesCob > 0
+    ? (ingUSD  / mesesCob * 12 / valorUSD_prop * 100).toFixed(1) + '% anual' : '—';
+  const rentN = valorUSD_prop > 0 && mesesCob > 0
+    ? (netoUSD / mesesCob * 12 / valorUSD_prop * 100).toFixed(1) + '% anual' : '—';
+  const rentNColor = netoUSD >= 0 ? '#a7f3d0' : '#fca5a5';
 
-    // ── Gastos del mes en USD ──
-    const gastosMes = getGastosMes(currentPropId, year, i);
-    const tcMesRef = getTCForMonth(i);
-    let gastoMesUSD = 0;
-    gastosMes.forEach(g => {
-      const v = parseNum(g.monto);
-      const cur = g.moneda || monedaLocalNombre;
-      if (cur === 'USD') { gastoMesUSD += v; }
-      else if (tcMesRef > 0) { gastoMesUSD += Math.round(v / tcMesRef); }
-    });
-    totalGastosUSD += gastoMesUSD;
+  const estadoBadge = cerrado
+    ? '<span style="background:rgba(255,255,255,0.2);color:#fff;border-radius:20px;padding:3px 12px;font-size:0.78rem;font-weight:700;">✓ Año completo</span>'
+    : `<span style="background:var(--yellow-light);color:var(--yellow);border-radius:20px;padding:3px 12px;font-size:0.78rem;font-weight:700;">⏳ En curso · ${mesesCob}/${mesesTot} meses</span>`;
 
-    const gastoDisplay = gastosMes.length > 0
-      ? `<span style="font-weight:700;color:var(--red);">USD ${gastoMesUSD.toLocaleString('es-AR')}</span>`
-      : '<span style="color:var(--text3);">—</span>';
-
-    // ── Resultado del mes ──
-    let resultadoDisplay = '<span style="color:var(--text3);">—</span>';
-    if (estado === 'pagado' && ingresoUSD > 0) {
-      const neto = ingresoUSD - gastoMesUSD;
-      const color = neto >= 0 ? 'var(--green)' : 'var(--red)';
-      const signo = neto >= 0 ? '+' : '';
-      resultadoDisplay = `<span style="font-weight:700;color:${color};">${signo}USD ${neto.toLocaleString('es-AR')}</span>`;
-    } else if (estado !== 'pagado' && monto > 0) {
-      resultadoDisplay = '<span style="color:var(--text3);font-size:0.8rem;">No cobrado</span>';
-    }
-
-    const estadoColor = estado === 'pagado' ? '#e8f5ee' : estado === 'vencido' ? '#fdecea' : 'transparent';
-
-    return `
-      <tr style="border-bottom:1px solid var(--border);background:${estadoColor};">
-        <td style="padding:9px 12px;font-weight:600;">${mes}</td>
-        <td style="padding:9px 12px;text-align:right;">${ingresoDisplay}</td>
-        <td style="padding:9px 12px;text-align:right;">${gastoDisplay}</td>
-        <td style="padding:9px 12px;text-align:right;">${resultadoDisplay}</td>
-        <td style="padding:9px 12px;text-align:center;">${getBadgeForPayStatus(estado)}</td>
-      </tr>`;
+  const filas = rows.map(r => {
+    const neto = r.ingUSD - r.gasUSD;
+    const bg   = r.estado === 'pagado' ? '#e8f5ee' : r.estado === 'vencido' ? '#fdecea' : 'transparent';
+    return `<tr style="border-bottom:1px solid var(--border);background:${bg};">
+      <td style="padding:8px 12px;font-weight:600;">${r.label}</td>
+      <td style="padding:8px 12px;text-align:right;">${r.ingUSD > 0 ? `<span style="font-weight:700;color:var(--green);">USD ${r.ingUSD.toLocaleString('es-AR')}</span>` : '<span style="color:var(--text3);">—</span>'}</td>
+      <td style="padding:8px 12px;text-align:right;">${r.gasUSD > 0 ? `<span style="font-weight:700;color:var(--red);">USD ${r.gasUSD.toLocaleString('es-AR')}</span>` : '<span style="color:var(--text3);">—</span>'}</td>
+      <td style="padding:8px 12px;text-align:right;">${(r.ingUSD > 0 || r.gasUSD > 0) ? `<span style="font-weight:700;color:${neto >= 0 ? 'var(--green)' : 'var(--red)'};">${neto >= 0 ? '+' : ''}USD ${neto.toLocaleString('es-AR')}</span>` : '<span style="color:var(--text3);">—</span>'}</td>
+      <td style="padding:8px 12px;text-align:center;">${getBadgeForPayStatus(r.estado)}</td>
+    </tr>`;
   }).join('');
 
-  const netoUSD = totalIngresosUSD - totalGastosUSD;
-
-  // ── Gastos resumen original (en moneda local) para mostrar en el recuadro ──
-  const totalGastosLocal = gastos.reduce((acc, g) => acc + parseNum(g.monto), 0);
-  const gastosLocalStr = totalGastosLocal > 0
-    ? `<div style="font-size:0.82rem;color:var(--red);margin-top:4px;">${monedaLocalNombre} ${totalGastosLocal.toLocaleString('es-AR')}</div>`
-    : '';
-
   body.innerHTML = `
-    <!-- Recuadros resumen -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:28px;">
-      <div style="background:var(--green-light);border-radius:var(--radius);padding:18px;text-align:center;">
-        <div style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--green);font-weight:700;margin-bottom:6px;">Ingresos cobrados</div>
-        <div style="font-size:1.5rem;font-weight:700;color:var(--green);">USD ${totalIngresosUSD.toLocaleString('es-AR')}</div>
-      </div>
-      <div style="background:var(--red-light);border-radius:var(--radius);padding:18px;text-align:center;">
-        <div style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--red);font-weight:700;margin-bottom:6px;">Gastos registrados</div>
-        <div style="font-size:1.5rem;font-weight:700;color:var(--red);">USD ${totalGastosUSD.toLocaleString('es-AR')}</div>
-        ${gastosLocalStr}
-      </div>
-      <div style="background:${netoUSD >= 0 ? 'var(--accent-light)' : 'var(--red-light)'};border-radius:var(--radius);padding:18px;text-align:center;">
-        <div style="font-size:0.73rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--accent);font-weight:700;margin-bottom:6px;">Resultado neto (USD)</div>
-        <div style="font-size:1.5rem;font-weight:700;color:${netoUSD >= 0 ? 'var(--accent)' : 'var(--red)'};">${netoUSD >= 0 ? '+' : ''}USD ${netoUSD.toLocaleString('es-AR')}</div>
-      </div>
-    </div>
-
-    <!-- Tabla detalle por mes -->
-    <h4 style="font-family:'Playfair Display',serif;font-weight:400;margin-bottom:14px;">Detalle mensual en USD</h4>
-    <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border);background:var(--surface2);">
-            <th style="text-align:left;padding:10px 12px;color:var(--text3);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Mes</th>
-            <th style="text-align:right;padding:10px 12px;color:var(--green);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">💰 Ingreso USD</th>
-            <th style="text-align:right;padding:10px 12px;color:var(--red);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">🧾 Gastos USD</th>
-            <th style="text-align:right;padding:10px 12px;color:var(--accent);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">📊 Resultado USD</th>
-            <th style="text-align:center;padding:10px 12px;color:var(--text3);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Estado</th>
-          </tr>
-        </thead>
-        <tbody>${filasMeses}</tbody>
-        <tfoot>
-          <tr style="border-top:2px solid var(--border);background:var(--surface2);">
-            <td style="padding:10px 12px;font-weight:700;font-size:0.9rem;">TOTAL ${year}</td>
-            <td style="padding:10px 12px;text-align:right;font-weight:700;color:var(--green);">USD ${totalIngresosUSD.toLocaleString('es-AR')}</td>
-            <td style="padding:10px 12px;text-align:right;font-weight:700;color:var(--red);">USD ${totalGastosUSD.toLocaleString('es-AR')}</td>
-            <td style="padding:10px 12px;text-align:right;font-weight:700;color:${netoUSD >= 0 ? 'var(--accent)' : 'var(--red)'};">${netoUSD >= 0 ? '+' : ''}USD ${netoUSD.toLocaleString('es-AR')}</td>
-            <td></td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  `;
-
-  // ── Tabla rentabilidad desde inicio de contrato ──
-  const ri = calcRentDesdeInicio(currentPropId);
-  const valorUSD_prop = VALORES_PROPIEDAD_USD[currentPropId] || 0;
-  if (ri && ri.rows.length > 0) {
-    const ri_netoC = ri.netoUSD >= 0 ? 'var(--accent)' : 'var(--red)';
-    const ri_rentBruta = valorUSD_prop > 0 && ri.totalIngUSD > 0 && ri.mesesContrato > 0
-      ? (ri.totalIngUSD / ri.mesesContrato * 12 / valorUSD_prop * 100).toFixed(1) + '% anual' : '—';
-    const ri_rentNeta  = valorUSD_prop > 0 && ri.totalIngUSD > 0 && ri.mesesContrato > 0
-      ? (ri.netoUSD    / ri.mesesContrato * 12 / valorUSD_prop * 100).toFixed(1) + '% anual' : '—';
-    const ri_rentNetaColor = ri.netoUSD >= 0 ? 'var(--green)' : 'var(--red)';
-
-    const riFilas = ri.rows.map(r => {
-      let ingDisp = r.ingUSD > 0 ? `<span style="font-weight:600;color:var(--green);">USD ${r.ingUSD.toLocaleString('es-AR')}</span>` : '<span style="color:var(--text3);">—</span>';
-      let gasDisp = r.gasUSD > 0 ? `<span style="font-weight:600;color:var(--red);">USD ${r.gasUSD.toLocaleString('es-AR')}</span>` : '<span style="color:var(--text3);">—</span>';
-      const neto  = r.ingUSD - r.gasUSD;
-      let netDisp = (r.ingUSD > 0 || r.gasUSD > 0)
-        ? `<span style="font-weight:700;color:${neto >= 0 ? 'var(--green)' : 'var(--red)'};">${neto >= 0 ? '+' : ''}USD ${neto.toLocaleString('es-AR')}</span>`
-        : '<span style="color:var(--text3);">—</span>';
-      const bg = r.estado === 'pagado' ? '#e8f5ee' : r.estado === 'vencido' ? '#fdecea' : 'transparent';
-      return `<tr style="border-bottom:1px solid var(--border);background:${bg};">
-        <td style="padding:9px 12px;font-weight:600;">${r.label}</td>
-        <td style="padding:9px 12px;text-align:right;">${ingDisp}</td>
-        <td style="padding:9px 12px;text-align:right;">${gasDisp}</td>
-        <td style="padding:9px 12px;text-align:right;">${netDisp}</td>
-        <td style="padding:9px 12px;text-align:center;">${getBadgeForPayStatus(r.estado)}</td>
-      </tr>`;
-    }).join('');
-
-    const riDiv = document.createElement('div');
-    riDiv.style.marginTop = '36px';
-    riDiv.innerHTML = `
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
-        <h4 style="font-family:'Playfair Display',serif;font-weight:400;font-size:1.15rem;margin:0;">📅 Rentabilidad acumulada desde inicio de contrato</h4>
-        <span style="background:var(--accent-light);color:var(--accent);border-radius:20px;padding:3px 12px;font-size:0.78rem;font-weight:600;">Desde ${formatDate(ri.inicio)} hasta hoy</span>
-        <span style="background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:3px 12px;font-size:0.78rem;font-weight:600;color:var(--text2);">${ri.mesesContrato} meses</span>
-      </div>
-
-      <!-- KPIs resumen desde inicio -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;">
-        <div style="background:var(--green-light);border-radius:var(--radius);padding:16px;text-align:center;">
-          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--green);font-weight:700;margin-bottom:5px;">Total cobrado</div>
-          <div style="font-size:1.35rem;font-weight:800;color:var(--green);">USD ${ri.totalIngUSD.toLocaleString('es-AR')}</div>
+    <div style="border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);">
+      <div style="background:var(--accent);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <span style="font-weight:800;font-size:1rem;">Año ${year}</span>
+          <span style="margin-left:8px;">${estadoBadge}</span>
         </div>
-        <div style="background:var(--red-light);border-radius:var(--radius);padding:16px;text-align:center;">
-          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--red);font-weight:700;margin-bottom:5px;">Total gastos</div>
-          <div style="font-size:1.35rem;font-weight:800;color:var(--red);">USD ${ri.totalGasUSD.toLocaleString('es-AR')}</div>
-        </div>
-        <div style="background:${ri.netoUSD >= 0 ? 'var(--accent-light)' : 'var(--red-light)'};border-radius:var(--radius);padding:16px;text-align:center;">
-          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--accent);font-weight:700;margin-bottom:5px;">Resultado neto</div>
-          <div style="font-size:1.35rem;font-weight:800;color:${ri_netoC};">${ri.netoUSD >= 0 ? '+' : ''}USD ${ri.netoUSD.toLocaleString('es-AR')}</div>
-        </div>
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--text3);font-weight:700;margin-bottom:5px;">Rent. bruta / neta acum.</div>
-          <div style="display:flex;justify-content:center;gap:12px;align-items:baseline;">
-            <span style="font-size:1.35rem;font-weight:800;color:var(--accent);">${ri_rentBruta}</span>
-            <span style="font-size:0.75rem;color:var(--text3);">bruta</span>
-            <span style="font-size:1.35rem;font-weight:800;color:${ri_rentNetaColor};">${ri_rentNeta}</span>
-            <span style="font-size:0.75rem;color:var(--text3);">neta</span>
-          </div>
-          ${valorUSD_prop > 0 ? `<div style="font-size:0.7rem;color:var(--text3);margin-top:4px;">Valor prop.: USD ${valorUSD_prop.toLocaleString('es-AR')}</div>` : '<div style="font-size:0.7rem;color:var(--yellow);margin-top:4px;">⚠ Sin valor cargado</div>'}
+        <div style="display:flex;gap:16px;">
+          <div style="text-align:right;"><div style="font-size:0.65rem;opacity:0.7;text-transform:uppercase;">Rent. Bruta</div><div style="font-size:1.2rem;font-weight:900;">${rentB}</div></div>
+          <div style="text-align:right;"><div style="font-size:0.65rem;opacity:0.7;text-transform:uppercase;">Rent. Neta</div><div style="font-size:1.2rem;font-weight:900;color:${rentNColor};">${rentN}</div></div>
         </div>
       </div>
-
-      <!-- Tabla mes a mes desde inicio -->
-      <div style="overflow-x:auto;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--surface2);border:1px solid var(--border);border-top:none;margin-bottom:0;">
+        <div style="padding:12px;text-align:center;border-right:1px solid var(--border);"><div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--green);margin-bottom:3px;">Cobrado</div><div style="font-weight:800;color:var(--green);">USD ${ingUSD.toLocaleString('es-AR')}</div></div>
+        <div style="padding:12px;text-align:center;border-right:1px solid var(--border);"><div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--red);margin-bottom:3px;">Gastos</div><div style="font-weight:800;color:var(--red);">${gasUSD > 0 ? 'USD ' + gasUSD.toLocaleString('es-AR') : '—'}</div></div>
+        <div style="padding:12px;text-align:center;"><div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:3px;">Neto</div><div style="font-weight:800;color:${netoC};">${netoUSD >= 0 ? '+' : ''}USD ${netoUSD.toLocaleString('es-AR')}</div></div>
+      </div>
+      <div style="overflow-x:auto;border:1px solid var(--border);border-top:none;">
         <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
-          <thead>
-            <tr style="border-bottom:2px solid var(--border);background:var(--surface2);">
-              <th style="text-align:left;padding:10px 12px;color:var(--text3);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Mes</th>
-              <th style="text-align:right;padding:10px 12px;color:var(--green);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">💰 Ingreso USD</th>
-              <th style="text-align:right;padding:10px 12px;color:var(--red);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">🧾 Gastos USD</th>
-              <th style="text-align:right;padding:10px 12px;color:var(--accent);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">📊 Resultado USD</th>
-              <th style="text-align:center;padding:10px 12px;color:var(--text3);font-size:0.73rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Estado</th>
-            </tr>
-          </thead>
-          <tbody>${riFilas}</tbody>
-          <tfoot>
-            <tr style="border-top:2px solid var(--border);background:var(--surface2);">
-              <td style="padding:10px 12px;font-weight:700;font-size:0.9rem;">TOTAL DESDE INICIO</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:700;color:var(--green);">USD ${ri.totalIngUSD.toLocaleString('es-AR')}</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:700;color:var(--red);">USD ${ri.totalGasUSD.toLocaleString('es-AR')}</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:700;color:${ri_netoC};">${ri.netoUSD >= 0 ? '+' : ''}USD ${ri.netoUSD.toLocaleString('es-AR')}</td>
-              <td></td>
-            </tr>
-          </tfoot>
+          <thead><tr style="background:var(--bg);border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:8px 12px;font-size:0.7rem;text-transform:uppercase;color:var(--text3);font-weight:700;">Mes</th>
+            <th style="text-align:right;padding:8px 12px;font-size:0.7rem;text-transform:uppercase;color:var(--green);font-weight:700;">💰 Ingreso</th>
+            <th style="text-align:right;padding:8px 12px;font-size:0.7rem;text-transform:uppercase;color:var(--red);font-weight:700;">🧾 Gastos</th>
+            <th style="text-align:right;padding:8px 12px;font-size:0.7rem;text-transform:uppercase;color:var(--accent);font-weight:700;">📊 Neto</th>
+            <th style="text-align:center;padding:8px 12px;font-size:0.7rem;text-transform:uppercase;color:var(--text3);font-weight:700;">Estado</th>
+          </tr></thead>
+          <tbody>${filas}</tbody>
+          <tfoot><tr style="border-top:2px solid var(--border);background:var(--surface2);">
+            <td style="padding:8px 12px;font-weight:700;">TOTAL ${year}</td>
+            <td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--green);">USD ${ingUSD.toLocaleString('es-AR')}</td>
+            <td style="padding:8px 12px;text-align:right;font-weight:700;color:var(--red);">${gasUSD > 0 ? 'USD ' + gasUSD.toLocaleString('es-AR') : '—'}</td>
+            <td style="padding:8px 12px;text-align:right;font-weight:700;color:${netoC};">${netoUSD >= 0 ? '+' : ''}USD ${netoUSD.toLocaleString('es-AR')}</td>
+            <td></td>
+          </tr></tfoot>
         </table>
       </div>
-    `;
-    body.appendChild(riDiv);
-  }
+    </div>`;
 }
+
+/* ═══════════════════════════════════════════════
+   HELPER: Poblar selectores de año contractual con fechas reales
+═══════════════════════════════════════════════ */
+
+// Para una sola propiedad (tab Rentabilidad individual
 
 function renderDocs() {
   if (!currentPropId) return;
@@ -9048,6 +9491,8 @@ function generarExpensasPDF() {
 
   doc.save('LiquidacionMensual_'+safeStr(p.nombre).replace(/\s+/g,'_')+'_'+mesAnio+'.pdf');
 }
+
+
 </script>
 </body>
 </html>
