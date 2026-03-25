@@ -1217,6 +1217,92 @@ textarea.form-control { resize: vertical; min-height: 80px; }
       <div id="resultado-total-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"></div>
     </div>
 
+    <!-- ══════════════════════════════════════════════════
+         GRÁFICO LINEAL: EVOLUCIÓN DE INGRESOS POR PROPIEDAD
+    ══════════════════════════════════════════════════ -->
+    <div class="card" style="margin-bottom:28px;" id="linechart-prop-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
+        <div>
+          <div style="font-family:'Sora',sans-serif;font-size:1.05rem;font-weight:800;color:var(--text);">📈 Evolución de Rentabilidad por Propiedad</div>
+          <div style="font-size:0.78rem;color:var(--text3);margin-top:2px;" id="linechart-prop-subtitle">Rentabilidad mensual anualizada</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <!-- Selector de vista temporal -->
+          <div style="display:flex;gap:0;align-items:center;">
+            <button id="lc-btn-anio" onclick="setLinechartMode('anio')"
+              style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;border-radius:8px 0 0 8px;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+              📅 Año en curso
+            </button>
+            <button id="lc-btn-aniocontrato" onclick="setLinechartMode('aniocontrato')"
+              style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
+              📆 Año de contrato
+            </button>
+            <button id="lc-btn-contrato" onclick="setLinechartMode('contrato')"
+              style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-radius:0 8px 8px 0;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
+              📋 Desde contrato
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila de toggles: propiedades + métricas + total -->
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;margin-bottom:10px;">
+
+        <!-- Propiedades -->
+        <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center;">
+          <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);white-space:nowrap;">Propiedades</span>
+          <div id="lc-prop-toggles" style="display:flex;flex-wrap:wrap;gap:7px;"></div>
+        </div>
+
+        <div style="width:1px;background:var(--border);align-self:stretch;margin:0 4px;"></div>
+
+        <!-- Métricas -->
+        <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center;">
+          <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);white-space:nowrap;">Mostrar</span>
+          <button id="lc-tog-neta" onclick="_lcToggleMetric('neta')"
+            style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #2e7d52;background:#2e7d52;color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            <span style="width:14px;height:2.5px;background:#fff;border-radius:2px;display:inline-block;"></span>
+            Rent. Neta
+          </button>
+          <button id="lc-tog-bruta" onclick="_lcToggleMetric('bruta')"
+            style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #2e7d52;background:transparent;color:#2e7d52;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            <span style="width:14px;border-top:2.5px dashed #2e7d52;display:inline-block;"></span>
+            Rent. Bruta
+          </button>
+          <button id="lc-tog-objetivo" onclick="_lcToggleMetric('objetivo')"
+            style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #9b9590;background:transparent;color:#9b9590;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            <span style="width:14px;border-top:2px dashed #9b9590;display:inline-block;"></span>
+            🎯 Objetivo
+          </button>
+        </div>
+
+        <div style="width:1px;background:var(--border);align-self:stretch;margin:0 4px;"></div>
+
+        <!-- Total operación -->
+        <div style="display:flex;align-items:center;gap:7px;">
+          <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);white-space:nowrap;">Portfolio</span>
+          <button id="lc-tog-total" onclick="_lcToggleMetric('total')"
+            style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #0f2547;background:#0f2547;color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            <span style="width:14px;height:3px;background:#fff;border-radius:2px;display:inline-block;"></span>
+            Total Operación
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Nota rentabilidad objetivo -->
+      <div id="lc-obj-note" style="font-size:0.72rem;color:var(--text3);margin-bottom:12px;display:none;padding:6px 10px;background:var(--bg);border-radius:6px;">
+        🎯 <strong>Objetivo</strong>: monto de contrato anualizado / valor del inmueble — rentabilidad esperada al firmar
+      </div>
+
+      <!-- Canvas -->
+      <div style="position:relative;height:360px;">
+        <canvas id="linechart-prop-canvas"></canvas>
+      </div>
+      <!-- Leyenda -->
+      <div id="lc-prop-legend" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);"></div>
+    </div>
+
     <div id="centro-body"></div>
 
   </div>
@@ -3651,6 +3737,8 @@ function renderCentroComputos() {
   renderPorPais();
   // Render investment chart
   renderInvChart();
+  // Render line chart by property
+  renderLinechartProp();
 }
 
 
@@ -4248,6 +4336,410 @@ function _buildInvChart(canvas, labels, datasets, periodoLabel) {
       <span style="width:22px;border-top:2px dashed ${col.est};display:inline-block;"></span><span style="color:var(--text3);">Est.</span>
     </div>`;
   }).join('');
+}
+
+
+/* ═══════════════════════════════════════════════
+   GRÁFICO LINEAL — EVOLUCIÓN POR PROPIEDAD
+   Vistas: año en curso / año de contrato / desde contrato
+   En "año de contrato" cada propiedad arranca en su mes de inicio contractual
+═══════════════════════════════════════════════ */
+
+var _lcMode        = 'anio';
+var _lcInstance    = null;
+var _lcActiveProps = {};
+var _lcMetrics     = { neta: true, bruta: false, objetivo: false, total: true };
+
+const LC_COLORS = {
+  'irigoyen':     '#1a3a6b',
+  'holmer':       '#2e7d52',
+  'phmelo':       '#b35c00',
+  'lovemolas':    '#7b2d8b',
+  'grandchelsea': '#c0392b',
+};
+
+function setLinechartMode(mode) {
+  _lcMode = mode;
+  const btns = { 'anio': 'lc-btn-anio', 'aniocontrato': 'lc-btn-aniocontrato', 'contrato': 'lc-btn-contrato' };
+  Object.entries(btns).forEach(([k, id]) => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    b.style.background = k === mode ? 'var(--accent)' : 'var(--surface)';
+    b.style.color      = k === mode ? '#fff'          : 'var(--text2)';
+  });
+  renderLinechartProp();
+}
+
+function _lcToggleMetric(metric) {
+  _lcMetrics[metric] = !_lcMetrics[metric];
+  _lcSyncMetricBtns();
+  renderLinechartProp();
+}
+
+function _lcSyncMetricBtns() {
+  const bNeta = document.getElementById('lc-tog-neta');
+  if (bNeta) {
+    bNeta.style.background = _lcMetrics.neta ? '#2e7d52' : 'transparent';
+    bNeta.style.color      = _lcMetrics.neta ? '#fff'    : '#2e7d52';
+    const sp = bNeta.querySelector('span');
+    if (sp) { sp.style.background = _lcMetrics.neta ? '#fff' : '#2e7d52'; }
+  }
+  const bBruta = document.getElementById('lc-tog-bruta');
+  if (bBruta) {
+    bBruta.style.background = _lcMetrics.bruta ? '#2e7d52' : 'transparent';
+    bBruta.style.color      = _lcMetrics.bruta ? '#fff'    : '#2e7d52';
+    const sp = bBruta.querySelector('span');
+    if (sp) sp.style.borderColor = _lcMetrics.bruta ? '#fff' : '#2e7d52';
+  }
+  const bObj = document.getElementById('lc-tog-objetivo');
+  if (bObj) {
+    bObj.style.background = _lcMetrics.objetivo ? '#9b9590' : 'transparent';
+    bObj.style.color      = _lcMetrics.objetivo ? '#fff'    : '#9b9590';
+    const sp = bObj.querySelector('span');
+    if (sp) sp.style.borderColor = _lcMetrics.objetivo ? '#fff' : '#9b9590';
+    const note = document.getElementById('lc-obj-note');
+    if (note) note.style.display = _lcMetrics.objetivo ? '' : 'none';
+  }
+  const bTot = document.getElementById('lc-tog-total');
+  if (bTot) {
+    bTot.style.background = _lcMetrics.total ? '#0f2547' : 'transparent';
+    bTot.style.color      = _lcMetrics.total ? '#fff'    : '#0f2547';
+    const sp = bTot.querySelector('span');
+    if (sp) sp.style.background = _lcMetrics.total ? '#fff' : '#0f2547';
+  }
+}
+
+function _lcInitToggles() {
+  const el = document.getElementById('lc-prop-toggles');
+  if (!el) return;
+  const props  = getProperties();
+  const allIds = Object.keys(VALORES_PROPIEDAD_USD);
+  if (Object.keys(_lcActiveProps).length === 0) {
+    allIds.forEach(id => { _lcActiveProps[id] = true; });
+  }
+  el.innerHTML = allIds.map(id => {
+    const col    = LC_COLORS[id] || '#888';
+    const label  = INV_LABELS[id] || (props[id]?.nombre || id);
+    const active = _lcActiveProps[id];
+    return `<button onclick="_lcToggleProp('${id}')" id="lc-tog-p-${id}"
+      style="display:inline-flex;align-items:center;gap:6px;padding:5px 13px;border-radius:20px;border:2px solid ${col};
+             background:${active ? col : 'transparent'};color:${active ? '#fff' : col};
+             font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+      <span style="width:8px;height:8px;border-radius:50%;background:${active ? '#fff' : col};display:inline-block;"></span>
+      ${label}
+    </button>`;
+  }).join('');
+}
+
+function _lcToggleProp(id) {
+  _lcActiveProps[id] = !_lcActiveProps[id];
+  const btn = document.getElementById('lc-tog-p-' + id);
+  if (btn) {
+    const col = LC_COLORS[id] || '#888';
+    const active = _lcActiveProps[id];
+    btn.style.background = active ? col : 'transparent';
+    btn.style.color      = active ? '#fff' : col;
+    const sp = btn.querySelector('span');
+    if (sp) sp.style.background = active ? '#fff' : col;
+  }
+  renderLinechartProp();
+}
+
+function _lcGetObjetivo(propId, props) {
+  const p   = props[propId] || {};
+  const val = VALORES_PROPIEDAD_USD[propId] || 0;
+  if (!val) return null;
+  const monto = parseNum(p.monto);
+  if (!monto) return null;
+  if (p.moneda === 'USD') return monto / val * 100 * 12;
+  const ri = calcRentDesdeInicio(propId);
+  return _invEstPct(propId, ri);
+}
+
+function _lcDS(label, data, color, bw, pr, dashed) {
+  return {
+    label, data,
+    borderColor: color,
+    backgroundColor: dashed ? 'transparent' : color + '12',
+    borderWidth: bw || 2,
+    borderDash: dashed ? [6, 4] : [],
+    pointRadius: (dashed || bw >= 3) ? 0 : (pr || 3),
+    pointHoverRadius: dashed ? 4 : ((pr || 3) + 2),
+    tension: 0.38,
+    fill: false,
+    spanGaps: false
+  };
+}
+
+function renderLinechartProp() {
+  const canvas = document.getElementById('linechart-prop-canvas');
+  if (!canvas) return;
+
+  _lcInitToggles();
+  _lcSyncMetricBtns();
+
+  const props   = getProperties();
+  const allIds  = Object.keys(VALORES_PROPIEDAD_USD);
+  const now     = new Date();
+  const year    = parseInt(document.getElementById('cc-year')?.value || now.getFullYear());
+  const MESES_L = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  const subtitles = {
+    anio: 'Año en curso · ' + year,
+    aniocontrato: 'Año de contrato · cada propiedad desde su inicio contractual',
+    contrato: 'Desde inicio de contrato hasta hoy'
+  };
+  const elSub = document.getElementById('linechart-prop-subtitle');
+  if (elSub) elSub.textContent = subtitles[_lcMode] || '';
+
+  let datasets = [];
+  let labels   = [];
+
+  function getRenta(row, val, neta) {
+    if (!row || row.estado !== 'pagado' || !val) return null;
+    return ((neta ? row.ingUSD - row.gasUSD : row.ingUSD) / val) * 100 * 12;
+  }
+
+  // ── AÑO EN CURSO ────────────────────────────────
+  if (_lcMode === 'anio') {
+    const maxMes = now.getFullYear() === year ? now.getMonth() : 11;
+    labels = MESES_L;
+
+    allIds.forEach(propId => {
+      if (!_lcActiveProps[propId]) return;
+      const ri  = calcRentDesdeInicio(propId);
+      const val = VALORES_PROPIEDAD_USD[propId] || 0;
+      const col = LC_COLORS[propId] || '#888';
+      const lbl = INV_LABELS[propId] || (props[propId]?.nombre || propId);
+      if (!ri || !val) return;
+
+      if (_lcMetrics.neta) {
+        const d = Array(12).fill(null);
+        for (let mi = 0; mi <= maxMes; mi++) {
+          d[mi] = getRenta(ri.rows.find(r => r.yr === year && r.mi === mi), val, true);
+        }
+        datasets.push(_lcDS(lbl + ' · Neta', d, col, 2.5, 3.5, false));
+      }
+      if (_lcMetrics.bruta) {
+        const d = Array(12).fill(null);
+        for (let mi = 0; mi <= maxMes; mi++) {
+          d[mi] = getRenta(ri.rows.find(r => r.yr === year && r.mi === mi), val, false);
+        }
+        datasets.push(_lcDS(lbl + ' · Bruta', d, col, 1.5, 0, true));
+      }
+      if (_lcMetrics.objetivo) {
+        const obj = _lcGetObjetivo(propId, props);
+        if (obj !== null) {
+          const d = Array(12).fill(null);
+          for (let mi = 0; mi <= maxMes; mi++) d[mi] = obj;
+          datasets.push(_lcDS(lbl + ' · Objetivo', d, '#9b9590', 1.5, 0, true));
+        }
+      }
+    });
+
+    if (_lcMetrics.total) {
+      const totVal = allIds.reduce((s, id) => s + (VALORES_PROPIEDAD_USD[id] || 0), 0);
+      const dN = _lcMetrics.neta  ? Array(12).fill(null) : null;
+      const dB = _lcMetrics.bruta ? Array(12).fill(null) : null;
+      for (let mi = 0; mi <= maxMes; mi++) {
+        let sN = 0, sB = 0, hasAny = false;
+        allIds.filter(id => _lcActiveProps[id]).forEach(id => {
+          const ri2 = calcRentDesdeInicio(id);
+          if (!ri2) return;
+          const row = ri2.rows.find(r => r.yr === year && r.mi === mi);
+          if (!row || row.estado !== 'pagado') return;
+          hasAny = true; sN += row.ingUSD - row.gasUSD; sB += row.ingUSD;
+        });
+        if (hasAny && totVal > 0) {
+          if (dN) dN[mi] = sN / totVal * 100 * 12;
+          if (dB) dB[mi] = sB / totVal * 100 * 12;
+        }
+      }
+      if (dN) datasets.push(_lcDS('Total · Neta',  dN, '#0f2547', 3.5, 0, false));
+      if (dB) datasets.push(_lcDS('Total · Bruta', dB, '#0f2547', 2,   0, true));
+    }
+
+  // ── AÑO DE CONTRATO ─────────────────────────────
+  } else if (_lcMode === 'aniocontrato') {
+    labels = Array.from({length: 12}, (_, i) => 'Mes ' + (i + 1));
+
+    allIds.forEach(propId => {
+      if (!_lcActiveProps[propId]) return;
+      const val = VALORES_PROPIEDAD_USD[propId] || 0;
+      const col = LC_COLORS[propId] || '#888';
+      const ac  = getACSeleccionado(propId);
+      if (!ac || !ac.rows.length || !val) return;
+      const startLabel = MESES_L[ac.rows[0].mi] + ' ' + ac.rows[0].yr;
+      const lbl = INV_LABELS[propId] || (props[propId]?.nombre || propId);
+
+      if (_lcMetrics.neta) {
+        const d = Array(12).fill(null);
+        ac.rows.forEach((row, idx) => { if (idx < 12) d[idx] = getRenta(row, val, true); });
+        datasets.push(_lcDS(lbl + ' · Neta (desde ' + startLabel + ')', d, col, 2.5, 3.5, false));
+      }
+      if (_lcMetrics.bruta) {
+        const d = Array(12).fill(null);
+        ac.rows.forEach((row, idx) => { if (idx < 12) d[idx] = getRenta(row, val, false); });
+        datasets.push(_lcDS(lbl + ' · Bruta (desde ' + startLabel + ')', d, col, 1.5, 0, true));
+      }
+      if (_lcMetrics.objetivo) {
+        const obj = _lcGetObjetivo(propId, props);
+        if (obj !== null) datasets.push(_lcDS(lbl + ' · Objetivo', Array(12).fill(obj), '#9b9590', 1.5, 0, true));
+      }
+    });
+
+    if (_lcMetrics.total) {
+      const totVal = allIds.reduce((s, id) => s + (VALORES_PROPIEDAD_USD[id] || 0), 0);
+      const dN = _lcMetrics.neta  ? Array(12).fill(null) : null;
+      const dB = _lcMetrics.bruta ? Array(12).fill(null) : null;
+      for (let idx = 0; idx < 12; idx++) {
+        let sN = 0, sB = 0, hasAny = false;
+        allIds.filter(id => _lcActiveProps[id]).forEach(id => {
+          const ac2 = getACSeleccionado(id);
+          if (!ac2 || idx >= ac2.rows.length) return;
+          const row = ac2.rows[idx];
+          if (!row || row.estado !== 'pagado') return;
+          hasAny = true; sN += row.ingUSD - row.gasUSD; sB += row.ingUSD;
+        });
+        if (hasAny && totVal > 0) {
+          if (dN) dN[idx] = sN / totVal * 100 * 12;
+          if (dB) dB[idx] = sB / totVal * 100 * 12;
+        }
+      }
+      if (dN) datasets.push(_lcDS('Total · Neta',  dN, '#0f2547', 3.5, 0, false));
+      if (dB) datasets.push(_lcDS('Total · Bruta', dB, '#0f2547', 2,   0, true));
+    }
+
+  // ── DESDE CONTRATO ──────────────────────────────
+  } else {
+    let minDate = null;
+    allIds.forEach(id => {
+      const ri2 = calcRentDesdeInicio(id);
+      if (!ri2 || !ri2.rows.length) return;
+      const d = new Date(ri2.rows[0].yr, ri2.rows[0].mi, 1);
+      if (!minDate || d < minDate) minDate = d;
+    });
+    if (!minDate) minDate = new Date(year, 0, 1);
+
+    const timeline = [];
+    let cur = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    const endD = new Date(now.getFullYear(), now.getMonth(), 1);
+    while (cur <= endD) {
+      timeline.push({ yr: cur.getFullYear(), mi: cur.getMonth(), label: MESES_L[cur.getMonth()] + ' ' + cur.getFullYear() });
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    labels = timeline.map(t => t.label);
+
+    allIds.forEach(propId => {
+      if (!_lcActiveProps[propId]) return;
+      const ri  = calcRentDesdeInicio(propId);
+      const val = VALORES_PROPIEDAD_USD[propId] || 0;
+      const col = LC_COLORS[propId] || '#888';
+      const lbl = INV_LABELS[propId] || (props[propId]?.nombre || propId);
+      if (!ri || !val) return;
+
+      const rowMap = {};
+      ri.rows.forEach(r => { rowMap[r.yr + '-' + r.mi] = r; });
+
+      if (_lcMetrics.neta) {
+        datasets.push(_lcDS(lbl + ' · Neta',  timeline.map(({yr,mi}) => getRenta(rowMap[yr+'-'+mi], val, true)),  col, 2.5, 3, false));
+      }
+      if (_lcMetrics.bruta) {
+        datasets.push(_lcDS(lbl + ' · Bruta', timeline.map(({yr,mi}) => getRenta(rowMap[yr+'-'+mi], val, false)), col, 1.5, 0, true));
+      }
+      if (_lcMetrics.objetivo) {
+        const obj = _lcGetObjetivo(propId, props);
+        if (obj !== null) {
+          datasets.push(_lcDS(lbl + ' · Objetivo', timeline.map(({yr,mi}) => rowMap[yr+'-'+mi] ? obj : null), '#9b9590', 1.5, 0, true));
+        }
+      }
+    });
+
+    if (_lcMetrics.total) {
+      const totVal = allIds.reduce((s, id) => s + (VALORES_PROPIEDAD_USD[id] || 0), 0);
+      const dN = _lcMetrics.neta  ? [] : null;
+      const dB = _lcMetrics.bruta ? [] : null;
+      timeline.forEach(({yr, mi}) => {
+        let sN = 0, sB = 0, hasAny = false;
+        allIds.filter(id => _lcActiveProps[id]).forEach(id => {
+          const ri2 = calcRentDesdeInicio(id);
+          if (!ri2) return;
+          const row = ri2.rows.find(r => r.yr === yr && r.mi === mi);
+          if (!row || row.estado !== 'pagado') return;
+          hasAny = true; sN += row.ingUSD - row.gasUSD; sB += row.ingUSD;
+        });
+        const n = hasAny && totVal > 0 ? sN / totVal * 100 * 12 : null;
+        const b = hasAny && totVal > 0 ? sB / totVal * 100 * 12 : null;
+        if (dN) dN.push(n);
+        if (dB) dB.push(b);
+      });
+      if (dN) datasets.push(_lcDS('Total · Neta',  dN, '#0f2547', 3.5, 0, false));
+      if (dB) datasets.push(_lcDS('Total · Bruta', dB, '#0f2547', 2,   0, true));
+    }
+  }
+
+  // ── Chart ────────────────────────────────────────
+  if (_lcInstance) { _lcInstance.destroy(); _lcInstance = null; }
+  const textCol = '#5c574e', gridCol = 'rgba(0,0,0,0.06)';
+
+  _lcInstance = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff', titleColor: '#1a1814', bodyColor: textCol,
+          borderColor: '#e8e4dc', borderWidth: 1, padding: 12,
+          filter: item => item.parsed.y !== null,
+          callbacks: {
+            title: items => items[0]?.label || '',
+            label: ctx => {
+              if (ctx.parsed.y === null) return null;
+              const isObj = ctx.dataset.label.includes('Objetivo');
+              return (isObj ? '  🎯 ' : '  ') + ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: gridCol },
+          ticks: { color: textCol, font: { size: 10, family: "'Plus Jakarta Sans',sans-serif" }, maxRotation: labels.length > 14 ? 45 : 0, maxTicksLimit: 18 }
+        },
+        y: {
+          grid: { color: gridCol },
+          ticks: { color: textCol, font: { size: 11, family: "'Plus Jakarta Sans',sans-serif" }, callback: v => v.toFixed(1) + '%' },
+          title: { display: true, text: 'Rentabilidad anualizada (%)', color: textCol, font: { size: 10 } }
+        }
+      }
+    }
+  });
+
+  // ── Leyenda ──────────────────────────────────────
+  const legendEl = document.getElementById('lc-prop-legend');
+  if (!legendEl) return;
+
+  const propRows = allIds.filter(id => _lcActiveProps[id]).map(id => {
+    const col = LC_COLORS[id] || '#888';
+    const lbl = INV_LABELS[id] || id;
+    return `<div style="display:flex;align-items:center;gap:7px;background:var(--bg);padding:5px 12px;border-radius:8px;font-size:0.74rem;">
+      <span style="font-weight:700;color:${col};">${lbl}</span>
+      ${_lcMetrics.neta  ? `<span style="width:16px;height:2.5px;background:${col};border-radius:2px;display:inline-block;"></span><span style="color:var(--text3);">Neta</span>` : ''}
+      ${_lcMetrics.bruta ? `<span style="width:16px;border-top:2px dashed ${col};display:inline-block;"></span><span style="color:var(--text3);">Bruta</span>` : ''}
+      ${_lcMetrics.objetivo ? `<span style="width:14px;border-top:2px dashed #9b9590;display:inline-block;"></span><span style="color:var(--text3);">Obj.</span>` : ''}
+    </div>`;
+  });
+
+  const totRow = _lcMetrics.total ? `<div style="display:flex;align-items:center;gap:7px;background:#0f254712;padding:5px 12px;border-radius:8px;font-size:0.74rem;border:1px solid #0f254730;">
+    <span style="font-weight:800;color:#0f2547;">Portfolio</span>
+    ${_lcMetrics.neta  ? `<span style="width:16px;height:3px;background:#0f2547;border-radius:2px;display:inline-block;"></span><span style="color:var(--text3);">Neta</span>` : ''}
+    ${_lcMetrics.bruta ? `<span style="width:16px;border-top:2px dashed #0f2547;display:inline-block;"></span><span style="color:var(--text3);">Bruta</span>` : ''}
+  </div>` : '';
+
+  legendEl.innerHTML = [...propRows, totRow].join('');
 }
 
 
@@ -6131,7 +6623,7 @@ function renderAllPropsTable() {
       '<td class="col-hide-mobile">' + rentNetaStr + '</td>' +
       '<td class="col-hide-mobile"><span style="font-weight:600;color:var(--text2);">USD ' + (valorUSD||0).toLocaleString('es-AR') + '</span></td>' +
       '<td style="text-align:center;white-space:nowrap;">' +
-        '<button onclick="goToProperty(\'' + id + '\')" class="btn btn-ghost btn-sm" style="padding:5px 12px;font-size:0.78rem;font-weight:700;color:var(--accent);border:1.5px solid var(--accent-light);margin-right:4px;" title="Ver detalle">Ver →</button>' +
+        
         '<button onclick="showExpensasModal(\'' + id + '\')" class="btn btn-ghost btn-sm" style="padding:5px 10px;font-size:0.78rem;color:var(--blue);border:1.5px solid var(--blue-light);margin-right:4px;" title="Liquidar expensas del mes">🧾</button>' +
         '<button onclick="showEditPropertyModal(\'' + id + '\')" class="btn btn-ghost btn-sm" style="padding:5px 10px;font-size:0.78rem;" title="Editar propiedad">✏️</button>' +
       '</td>' +
