@@ -4305,7 +4305,7 @@ function _buildInvChart(canvas, labels, datasets, periodoLabel) {
           filter: item => item.parsed.y !== null,
           callbacks: {
             title: items => periodoLabel + ' · ' + (items[0]?.label||''),
-            label: ctx => ctx.parsed.y === null ? null : '  ' + ctx.dataset.label + ': ' + (ctx.parsed.y * 10).toFixed(2) + '%'
+            label: ctx => ctx.parsed.y === null ? null : '  ' + ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%'
           }
         }
       },
@@ -4316,8 +4316,8 @@ function _buildInvChart(canvas, labels, datasets, periodoLabel) {
         },
         y: {
           grid: { color: gridCol },
-          ticks: { color: textCol, font: { size: 11, family: "'Plus Jakarta Sans',sans-serif" }, callback: v => (v * 10).toFixed(2) + '%' },
-          title: { display: true, text: 'Rentabilidad mensual real (%)', color: textCol, font: { size: 10 } }
+          ticks: { color: textCol, font: { size: 11, family: "'Plus Jakarta Sans',sans-serif" }, callback: v => v.toFixed(1) + '%' },
+          title: { display: true, text: 'Rentabilidad anualizada (%)', color: textCol, font: { size: 10 } }
         }
       }
     }
@@ -4451,9 +4451,9 @@ function _lcGetObjetivo(propId, props) {
   if (!val) return null;
   const monto = parseNum(p.monto);
   if (!monto) return null;
-  if (p.moneda === 'USD') return monto / val * 100;
+  if (p.moneda === 'USD') return monto / val * 100 * 12;
   const ri = calcRentDesdeInicio(propId);
-  const anual = _invEstPct(propId, ri); return anual !== null ? anual / 12 : null;
+  return _invEstPct(propId, ri);
 }
 
 function _lcDS(label, data, color, bw, pr, dashed) {
@@ -4497,7 +4497,7 @@ function renderLinechartProp() {
 
   function getRenta(row, val, neta) {
     if (!row || row.estado !== 'pagado' || !val) return null;
-    return ((neta ? row.ingUSD - row.gasUSD : row.ingUSD) / val) * 100;
+    return ((neta ? row.ingUSD - row.gasUSD : row.ingUSD) / val) * 100 * 12;
   }
 
   // ── AÑO EN CURSO ────────────────────────────────
@@ -4551,8 +4551,8 @@ function renderLinechartProp() {
           hasAny = true; sN += row.ingUSD - row.gasUSD; sB += row.ingUSD;
         });
         if (hasAny && totVal > 0) {
-          if (dN) dN[mi] = sN / totVal * 100;
-          if (dB) dB[mi] = sB / totVal * 100;
+          if (dN) dN[mi] = sN / totVal * 100 * 12;
+          if (dB) dB[mi] = sB / totVal * 100 * 12;
         }
       }
       if (dN) datasets.push(_lcDS('Total · Neta',  dN, '#0f2547', 3.5, 0, false));
@@ -4602,8 +4602,8 @@ function renderLinechartProp() {
           hasAny = true; sN += row.ingUSD - row.gasUSD; sB += row.ingUSD;
         });
         if (hasAny && totVal > 0) {
-          if (dN) dN[idx] = sN / totVal * 100;
-          if (dB) dB[idx] = sB / totVal * 100;
+          if (dN) dN[idx] = sN / totVal * 100 * 12;
+          if (dB) dB[idx] = sB / totVal * 100 * 12;
         }
       }
       if (dN) datasets.push(_lcDS('Total · Neta',  dN, '#0f2547', 3.5, 0, false));
@@ -4668,8 +4668,8 @@ function renderLinechartProp() {
           if (!row || row.estado !== 'pagado') return;
           hasAny = true; sN += row.ingUSD - row.gasUSD; sB += row.ingUSD;
         });
-        const n = hasAny && totVal > 0 ? sN / totVal * 100 : null;
-        const b = hasAny && totVal > 0 ? sB / totVal * 100 : null;
+        const n = hasAny && totVal > 0 ? sN / totVal * 100 * 12 : null;
+        const b = hasAny && totVal > 0 ? sB / totVal * 100 * 12 : null;
         if (dN) dN.push(n);
         if (dB) dB.push(b);
       });
@@ -4699,7 +4699,7 @@ function renderLinechartProp() {
             label: ctx => {
               if (ctx.parsed.y === null) return null;
               const isObj = ctx.dataset.label.includes('Objetivo');
-              return (isObj ? '  🎯 ' : '  ') + ctx.dataset.label + ': ' + (ctx.parsed.y * 10).toFixed(2) + '%';
+              return (isObj ? '  🎯 ' : '  ') + ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%';
             }
           }
         }
@@ -4711,8 +4711,8 @@ function renderLinechartProp() {
         },
         y: {
           grid: { color: gridCol },
-          ticks: { color: textCol, font: { size: 11, family: "'Plus Jakarta Sans',sans-serif" }, callback: v => (v * 10).toFixed(2) + '%' },
-          title: { display: true, text: 'Rentabilidad mensual real (%)', color: textCol, font: { size: 10 } }
+          ticks: { color: textCol, font: { size: 11, family: "'Plus Jakarta Sans',sans-serif" }, callback: v => v.toFixed(1) + '%' },
+          title: { display: true, text: 'Rentabilidad anualizada (%)', color: textCol, font: { size: 10 } }
         }
       }
     }
