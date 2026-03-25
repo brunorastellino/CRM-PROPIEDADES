@@ -1175,19 +1175,33 @@ textarea.form-control { resize: vertical; min-height: 80px; }
           <div style="font-family:'Sora',sans-serif;font-size:1.05rem;font-weight:800;color:var(--text);">Rentabilidad por Propiedad</div>
           <div style="font-size:0.78rem;color:var(--text3);margin-top:2px;" id="dash-rent-subtitle">Desde inicio de contrato</div>
         </div>
-        <div style="display:flex;gap:0;align-items:center;">
-          <button id="drent-btn-anio" onclick="setDashRentMode('anio')"
-            style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;border-radius:8px 0 0 8px;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
-            📅 Año en curso
-          </button>
-          <button id="drent-btn-aniocontrato" onclick="setDashRentMode('aniocontrato')"
-            style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
-            📆 Año contractual
-          </button>
-          <button id="drent-btn-contrato" onclick="setDashRentMode('contrato')"
-            style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-radius:0 8px 8px 0;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;transition:all 0.15s;">
-            📋 Desde contrato
-          </button>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <!-- Toggle Acumulado / Mensual -->
+          <div style="display:flex;gap:0;align-items:center;">
+            <button id="drent-view-acumulado" onclick="setDashRentView('acumulado')"
+              style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;border-radius:8px 0 0 8px;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+              📊 Acumulado
+            </button>
+            <button id="drent-view-mensual" onclick="setDashRentView('mensual')"
+              style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-radius:0 8px 8px 0;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
+              📅 Mensual
+            </button>
+          </div>
+          <!-- Toggle período -->
+          <div style="display:flex;gap:0;align-items:center;">
+            <button id="drent-btn-anio" onclick="setDashRentMode('anio')"
+              style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;border-radius:8px 0 0 8px;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
+              📅 Año en curso
+            </button>
+            <button id="drent-btn-aniocontrato" onclick="setDashRentMode('aniocontrato')"
+              style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-right:none;background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;">
+              📆 Año contractual
+            </button>
+            <button id="drent-btn-contrato" onclick="setDashRentMode('contrato')"
+              style="padding:6px 14px;font-size:0.8rem;font-weight:600;border:1.5px solid var(--border2);border-radius:0 8px 8px 0;background:var(--accent);color:#fff;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+              📋 Desde contrato
+            </button>
+          </div>
         </div>
       </div>
       <div id="dash-rent-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px;"></div>
@@ -6147,6 +6161,28 @@ function renderDashboard() {
    PANEL RENTABILIDADES POR PROPIEDAD — DASHBOARD
 ═══════════════════════════════════════════════ */
 var _dashRentMode = 'anio'; // 'anio' | 'aniocontrato' | 'contrato'
+var _dashRentView = 'acumulado'; // 'acumulado' | 'mensual'
+
+function setDashRentView(view) {
+  _dashRentView = view;
+  const btnAcum = document.getElementById('drent-view-acumulado');
+  const btnMes  = document.getElementById('drent-view-mensual');
+  if (btnAcum) {
+    btnAcum.style.background = view === 'acumulado' ? 'var(--accent)' : 'var(--surface)';
+    btnAcum.style.color      = view === 'acumulado' ? '#fff' : 'var(--text2)';
+  }
+  if (btnMes) {
+    btnMes.style.background = view === 'mensual' ? 'var(--accent)' : 'var(--surface)';
+    btnMes.style.color      = view === 'mensual' ? '#fff' : 'var(--text2)';
+  }
+  const sub = document.getElementById('dash-rent-subtitle');
+  if (sub) {
+    const periodoTxt = _dashRentMode === 'anio' ? 'Año en curso · ' + new Date().getFullYear()
+      : _dashRentMode === 'aniocontrato' ? 'Último año contractual' : 'Desde inicio de contrato';
+    sub.textContent = periodoTxt + ' · ' + (view === 'mensual' ? 'Rentabilidad mensual' : 'Rentabilidad acumulada');
+  }
+  renderDashRent();
+}
 
 function setDashRentMode(mode) {
   // ── This is the MASTER sync for the whole investment dashboard ──
@@ -6161,8 +6197,11 @@ function setDashRentMode(mode) {
     b.style.color      = k === mode ? '#fff'          : 'var(--text2)';
   });
   const sub = document.getElementById('dash-rent-subtitle');
-  if (sub) sub.textContent = mode === 'anio' ? 'Año en curso · ' + new Date().getFullYear()
-    : mode === 'aniocontrato' ? 'Último año contractual' : 'Desde inicio de contrato';
+  if (sub) {
+    const periodoTxt = mode === 'anio' ? 'Año en curso · ' + new Date().getFullYear()
+      : mode === 'aniocontrato' ? 'Último año contractual' : 'Desde inicio de contrato';
+    sub.textContent = periodoTxt + ' · ' + (_dashRentView === 'mensual' ? 'Rentabilidad mensual' : 'Rentabilidad acumulada');
+  }
 
   // 2. Sync main CC toggle buttons (calendario = anio, else same)
   const ccModeNew = mode === 'anio' ? 'calendario' : mode;
@@ -6222,6 +6261,7 @@ function renderDashRent() {
     const sym = (p.moneda === 'USD') ? 'USD ' : (p.pais||'').toLowerCase().includes('paraguay') ? '₲ ' : '$ ';
 
     let ingUSD = 0, gasUSD = 0, netoUSD = 0, rentB = null, rentN = null, rango = '', mesesCob = 0, mesesTot = 0;
+    let rentBMes = null, rentNMes = null, lastMesLabel = '';
 
     if (_dashRentMode === 'anio') {
       // Año calendario actual
@@ -6236,6 +6276,14 @@ function renderDashRent() {
         rentB = (ingUSD  / mesesCob * 12) / val * 100;
         rentN = (netoUSD / mesesCob * 12) / val * 100;
       }
+      // Mensual: último mes pagado del año
+      const lastPaidRow = [...rows].reverse().find(r => r.estado === 'pagado');
+      if (lastPaidRow && val > 0) {
+        const MESES_L2 = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        lastMesLabel = MESES_L2[lastPaidRow.mi] + ' ' + lastPaidRow.yr;
+        rentBMes = (lastPaidRow.ingUSD * 12) / val * 100;
+        rentNMes = ((lastPaidRow.ingUSD - lastPaidRow.gasUSD) * 12) / val * 100;
+      }
     } else if (_dashRentMode === 'aniocontrato') {
       // Último año contractual (el más reciente)
       const ac = ri.aniosContrato[ri.aniosContrato.length - 1];
@@ -6244,6 +6292,14 @@ function renderDashRent() {
       rentB    = ac.rentBruta;  rentN = ac.rentNeta;
       mesesCob = ac.mesesCobrados;  mesesTot = ac.mesesTotal;
       rango    = ac.rangoLabel;
+      // Mensual: último mes pagado del año contractual
+      const lastPaidAC = ac.rows ? [...ac.rows].reverse().find(r => r.estado === 'pagado') : null;
+      if (lastPaidAC && val > 0) {
+        const MESES_L2 = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        lastMesLabel = MESES_L2[lastPaidAC.mi] + ' ' + lastPaidAC.yr;
+        rentBMes = (lastPaidAC.ingUSD * 12) / val * 100;
+        rentNMes = ((lastPaidAC.ingUSD - lastPaidAC.gasUSD) * 12) / val * 100;
+      }
     } else {
       // Desde inicio de contrato
       ingUSD   = ri.totalIngUSD;  gasUSD = ri.totalGasUSD;  netoUSD = ri.netoUSD;
@@ -6254,11 +6310,28 @@ function renderDashRent() {
         rentB = (ingUSD  / mesesCob * 12) / val * 100;
         rentN = (netoUSD / mesesCob * 12) / val * 100;
       }
+      // Mensual: último mes pagado desde inicio
+      const lastPaidRI = [...ri.rows].reverse().find(r => r.estado === 'pagado');
+      if (lastPaidRI && val > 0) {
+        const MESES_L2 = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        lastMesLabel = MESES_L2[lastPaidRI.mi] + ' ' + lastPaidRI.yr;
+        rentBMes = (lastPaidRI.ingUSD * 12) / val * 100;
+        rentNMes = ((lastPaidRI.ingUSD - lastPaidRI.gasUSD) * 12) / val * 100;
+      }
     }
 
-    const rbStr = rentB !== null ? (rentB >= 0 ? '+' : '') + rentB.toFixed(1) + '%' : '—';
-    const rnStr = rentN !== null ? (rentN >= 0 ? '+' : '') + rentN.toFixed(1) + '%' : '—';
-    const rnColor = rentN !== null && rentN < 0 ? 'var(--red)' : 'var(--green)';
+    // Seleccionar qué rentabilidad mostrar según view mode
+    const isMensual = _dashRentView === 'mensual';
+    const displayRentB = isMensual ? rentBMes : rentB;
+    const displayRentN = isMensual ? rentNMes : rentN;
+    const displayRentLabel = isMensual
+      ? (lastMesLabel ? 'Rent. Neta · ' + lastMesLabel : 'Rent. Neta mes')
+      : 'Rent. Neta';
+    const displayRentBLabel = isMensual ? 'bruta mes ' : 'bruta ';
+
+    const rbStr = displayRentB !== null ? (displayRentB >= 0 ? '+' : '') + displayRentB.toFixed(1) + '%' : '—';
+    const rnStr = displayRentN !== null ? (displayRentN >= 0 ? '+' : '') + displayRentN.toFixed(1) + '%' : '—';
+    const rnColor = displayRentN !== null && displayRentN < 0 ? 'var(--red)' : 'var(--green)';
 
     cards.push(`
       <div onclick="showProperty('${id}')" style="background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:box-shadow 0.15s;display:flex;flex-direction:column;gap:10px;"
@@ -6270,9 +6343,9 @@ function renderDashRent() {
             <div style="font-size:0.72rem;color:var(--text3);margin-top:2px;">${rango} · ${mesesCob}/${mesesTot} meses</div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;">
-            <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);">Rent. Neta</div>
+            <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text3);">${displayRentLabel}</div>
             <div style="font-size:1.35rem;font-weight:800;color:${rnColor};line-height:1;">${rnStr}</div>
-            <div style="font-size:0.72rem;color:var(--text3);">bruta ${rbStr}</div>
+            <div style="font-size:0.72rem;color:var(--text3);">${displayRentBLabel}${rbStr}</div>
           </div>
         </div>
         <!-- Barra de datos -->
