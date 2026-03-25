@@ -10245,29 +10245,22 @@ function renderBarChartProp() {
   let rentNetaArr = [], rentBrutaArr = [], rentObjetivoArr = [];
 
   /* ── Helpers ───────────────────────────────── */
-  // Ingreso esperado = monto vigente del mes (con ajustes IPC ya aplicados),
-  // convertido a USD con el TC de ese mes. Usa el row de ri si existe,
-  // si no cae al monto original del contrato.
-  function getIngEsperado(yr, mi) {
-    const row = ri.rows.find(r => r.yr === yr && r.mi === mi);
-    if (row) {
-      // Si ya fue pagado, el ingUSD ES el ingreso esperado cobrado
-      if (row.estado === 'pagado') return row.ingUSD;
-      // Si no fue pagado, convertir el monto del row (ajustado) al TC del mes
-      const monto = parseNum(row.monto);
-      const moneda = row.monedaLocal || p.moneda || 'ARS';
-      if (!monto) return null;
-      if (moneda === 'USD') return monto;
-      const tc = _rcGetTC(propId, yr, mi);
-      return tc > 0 ? Math.round(monto / tc) : null;
-    }
-    // Fallback: monto original del contrato
-    const moneda = p.moneda || 'ARS';
-    const monto  = parseFloat(p.monto) || 0;
+  // Ingreso esperado = monto del PRIMER mes del contrato en USD (línea plana)
+  const _primerRow = ri.rows[0];
+  const _ingEsperadoUSD = (() => {
+    if (!_primerRow) return null;
+    const moneda = _primerRow.monedaLocal || p.moneda || 'ARS';
+    const monto  = parseNum(_primerRow.monto);
     if (!monto) return null;
     if (moneda === 'USD') return monto;
-    const tc = _rcGetTC(propId, yr, mi);
+    const tc = _rcGetTC(propId, _primerRow.yr, _primerRow.mi);
     return tc > 0 ? Math.round(monto / tc) : null;
+  })();
+
+  function getIngEsperado(yr, mi) {
+    // Solo mostrar si el mes está dentro del período del contrato
+    const row = ri.rows.find(r => r.yr === yr && r.mi === mi);
+    return row ? _ingEsperadoUSD : null;
   }
 
   // Rentabilidad acumulada del año contractual hasta ese mes
