@@ -999,6 +999,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     <!-- Stats -->
     <div class="stats-grid" id="dash-stats"></div>
 
+
     <!-- Acceso rápido a todas las propiedades -->
     <div class="card mb-2" style="margin-bottom:24px;">
       <div class="flex items-center justify-between mb-2" style="flex-wrap:wrap;gap:8px;">
@@ -1262,12 +1263,22 @@ textarea.form-control { resize: vertical; min-height: 80px; }
           <button id="lc-tog-neta" onclick="_lcToggleMetric('neta')"
             style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #2e7d52;background:#2e7d52;color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
             <span style="width:14px;height:2.5px;background:#fff;border-radius:2px;display:inline-block;"></span>
-            Rent. Neta
+            Rent. Neta acum.
+          </button>
+          <button id="lc-tog-netames" onclick="_lcToggleMetric('netaMes')"
+            style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #2e7d52;background:transparent;color:#2e7d52;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            <span style="width:14px;border-top:2.5px dotted #2e7d52;display:inline-block;"></span>
+            Rent. Neta mes
           </button>
           <button id="lc-tog-bruta" onclick="_lcToggleMetric('bruta')"
             style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #2e7d52;background:transparent;color:#2e7d52;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
             <span style="width:14px;border-top:2.5px dashed #2e7d52;display:inline-block;"></span>
-            Rent. Bruta
+            Rent. Bruta acum.
+          </button>
+          <button id="lc-tog-brutames" onclick="_lcToggleMetric('brutaMes')"
+            style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #2e7d52;background:transparent;color:#2e7d52;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            <span style="width:14px;border-top:2px dotted #4a7fc1;display:inline-block;"></span>
+            Rent. Bruta mes
           </button>
           <button id="lc-tog-objetivo" onclick="_lcToggleMetric('objetivo')"
             style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #9b9590;background:transparent;color:#9b9590;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
@@ -1279,12 +1290,17 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <div style="width:1px;background:var(--border);align-self:stretch;margin:0 4px;"></div>
 
         <!-- Total operación -->
-        <div style="display:flex;align-items:center;gap:7px;">
+        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
           <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);white-space:nowrap;">Portfolio</span>
-          <button id="lc-tog-total" onclick="_lcToggleMetric('total')"
+          <button id="lc-tog-total-acum" onclick="_lcToggleMetric('totalAcum')"
             style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #0f2547;background:#0f2547;color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
             <span style="width:14px;height:3px;background:#fff;border-radius:2px;display:inline-block;"></span>
-            Total Operación
+            Total acum.
+          </button>
+          <button id="lc-tog-total-mes" onclick="_lcToggleMetric('totalMes')"
+            style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #0f2547;background:transparent;color:#0f2547;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            <span style="width:14px;border-top:2.5px dotted #0f2547;display:inline-block;"></span>
+            Total mes
           </button>
         </div>
 
@@ -1295,9 +1311,13 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         🎯 <strong>Objetivo</strong>: monto de contrato anualizado / valor del inmueble — rentabilidad esperada al firmar
       </div>
 
-      <!-- Canvas -->
+      <!-- Canvas + tooltip panel -->
       <div style="position:relative;height:360px;">
         <canvas id="linechart-prop-canvas"></canvas>
+        <div id="lc-tooltip-panel" style="display:none;position:absolute;top:12px;right:12px;background:#fff;border:1px solid #e8e4dc;border-radius:12px;padding:14px 18px;min-width:200px;max-width:280px;box-shadow:0 4px 20px rgba(0,0,0,0.12);z-index:10;pointer-events:none;">
+          <div id="lc-tooltip-title" style="font-size:0.82rem;font-weight:800;color:#1a1814;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid #e8e4dc;padding-bottom:6px;"></div>
+          <div id="lc-tooltip-body" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
       </div>
       <!-- Leyenda -->
       <div id="lc-prop-legend" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);"></div>
@@ -1337,22 +1357,51 @@ textarea.form-control { resize: vertical; min-height: 80px; }
           <div id="bc-prop-toggles" style="display:flex;flex-wrap:wrap;gap:7px;"></div>
         </div>
         <div style="width:1px;background:var(--border);align-self:stretch;margin:0 4px;"></div>
+
+        <!-- Ingresos -->
         <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center;">
-          <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);white-space:nowrap;">Mostrar</span>
-          <button id="bc-tog-barras" onclick="_bcToggleMetric('barras')"
+          <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);white-space:nowrap;">Ingresos</span>
+          <button id="bc-tog-ingEsperado" onclick="_bcToggleMetric('ingEsperado')"
+            style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #7a9fd4;background:#7a9fd4;color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            <span style="width:10px;height:10px;background:#fff;border-radius:2px;display:inline-block;"></span>
+            Esperado
+          </button>
+          <button id="bc-tog-ingBruto" onclick="_bcToggleMetric('ingBruto')"
             style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #1a3a6b;background:#1a3a6b;color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
             <span style="width:10px;height:10px;background:#fff;border-radius:2px;display:inline-block;"></span>
-            Ingresos
+            Bruto cobrado
           </button>
+          <button id="bc-tog-ingNeto" onclick="_bcToggleMetric('ingNeto')"
+            style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #2e7d52;background:#2e7d52;color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            <span style="width:10px;height:10px;background:#fff;border-radius:2px;display:inline-block;"></span>
+            Neto
+          </button>
+        </div>
+
+        <div style="width:1px;background:var(--border);align-self:stretch;margin:0 4px;"></div>
+
+        <!-- Rentabilidades -->
+        <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center;">
+          <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);white-space:nowrap;">Rentabilidad</span>
           <button id="bc-tog-neta" onclick="_bcToggleMetric('neta')"
             style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #2e7d52;background:#2e7d52;color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
             <span style="width:14px;height:2.5px;background:#fff;border-radius:2px;display:inline-block;"></span>
-            Rent. Neta
+            Neta acum.
+          </button>
+          <button id="bc-tog-netaMes" onclick="_bcToggleMetric('netaMes')"
+            style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #2e7d52;background:transparent;color:#2e7d52;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            <span style="width:14px;border-top:2.5px dotted #2e7d52;display:inline-block;"></span>
+            Neta mes
           </button>
           <button id="bc-tog-bruta" onclick="_bcToggleMetric('bruta')"
             style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #4a7fc1;background:transparent;color:#4a7fc1;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
             <span style="width:14px;border-top:2.5px dashed #4a7fc1;display:inline-block;"></span>
-            Rent. Bruta
+            Bruta acum.
+          </button>
+          <button id="bc-tog-brutaMes" onclick="_bcToggleMetric('brutaMes')"
+            style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #4a7fc1;background:transparent;color:#4a7fc1;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+            <span style="width:14px;border-top:2px dotted #4a7fc1;display:inline-block;"></span>
+            Bruta mes
           </button>
           <button id="bc-tog-objetivo" onclick="_bcToggleMetric('objetivo')"
             style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;border:2px solid #9b9590;background:transparent;color:#9b9590;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
@@ -1364,11 +1413,18 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 
       <div style="position:relative;height:380px;">
         <canvas id="barchart-prop-canvas"></canvas>
+        <div id="bc-tooltip-panel" style="display:none;position:absolute;top:12px;right:12px;background:#fff;border:1px solid #e8e4dc;border-radius:12px;padding:14px 18px;min-width:210px;max-width:290px;box-shadow:0 4px 20px rgba(0,0,0,0.12);z-index:10;pointer-events:none;">
+          <div id="bc-tooltip-title" style="font-size:0.82rem;font-weight:800;color:#1a1814;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid #e8e4dc;padding-bottom:6px;"></div>
+          <div id="bc-tooltip-body" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
       </div>
       <div id="bc-prop-legend" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);font-size:0.75rem;color:var(--text2);"></div>
     </div>
 
     <div id="centro-body"></div>
+
+    <!-- Rentabilidades e Ingresos por Depto (Dashboard de Inversión) -->
+    <div id="dash-rent-cards" style="margin-bottom:24px;"></div>
 
   </div>
 
@@ -2862,7 +2918,7 @@ function saveNotes(propId, notes) { setData(`notes_${propId}`, notes); }
 function doLogin() {
   const user = document.getElementById('login-user').value.trim();
   const pass = document.getElementById('login-pass').value;
-  if (user === 'BRASTELLINO' && pass === 'BRASTELLINO') {
+  if (user.toUpperCase() === 'BRASTELLINO' && pass === '1549472496') {
     setData('session', { logged: true });
     document.getElementById('screen-login').classList.add('hidden');
     document.getElementById('topbar').classList.remove('hidden');
@@ -3806,6 +3862,8 @@ function renderCentroComputos() {
   renderLinechartProp();
   // Render bar chart by property
   renderBarChartProp();
+  // Render rent cards per property
+  renderDashRentCards();
 }
 
 
@@ -4127,38 +4185,26 @@ function renderInvChart() {
       const ri  = calcRentDesdeInicio(propId);
       if (!ri || !val) return;
 
-      // Estimada: monto contrato annualizado / valor (from ri context)
-      const estVal = _invEstPct(propId, ri);
-
+      const estVal  = _lcGetObjetivo(propId, props);
       const realArr = Array(12).fill(null);
-      const estArr  = Array(12).fill(estVal); // flat line
+      const estArr  = Array(12).fill(estVal);
 
       for (let mi = 0; mi <= maxMes; mi++) {
-        const row = ri.rows.find(r => r.yr === year && r.mi === mi);
-        if (!row || row.estado !== 'pagado') continue;
-        const net = tipo === 'neta' ? (row.ingUSD - row.gasUSD) : row.ingUSD;
-        realArr[mi] = net / val * 100 * 12;
+        const neta = tipo === 'neta';
+        realArr[mi] = getRentaAcum(ri, val, year, mi, neta);
       }
-      datasets.push(_ds(lbl + ' Real',     realArr,          col.real, false, 2.5, 3));
-      datasets.push(_ds(lbl + ' Estimada', estArr,           col.est,  true,  1.5, 1));
+      datasets.push(_ds(lbl + ' Real',     realArr, col.real, false, 2.5, 3));
+      datasets.push(_ds(lbl + ' Estimada', estArr,  col.est,  true,  1.5, 1));
     });
 
     // Total portfolio
     if (_invChartActiveProps['TOTAL']) {
       const totVal = allIds.reduce((s,id) => s + (VALORES_PROPIEDAD_USD[id]||0), 0);
       const totEst = _invTotalEstPct(allIds, props);
+      const neta   = tipo === 'neta';
       const totReal = Array(12).fill(null);
       for (let mi = 0; mi <= maxMes; mi++) {
-        let tR = 0, hasR = false;
-        allIds.forEach(id => {
-          const ri2 = calcRentDesdeInicio(id);
-          if (!ri2) return;
-          const row = ri2.rows.find(r => r.yr === year && r.mi === mi);
-          if (!row || row.estado !== 'pagado') return;
-          hasR = true;
-          tR += tipo === 'neta' ? (row.ingUSD - row.gasUSD) : row.ingUSD;
-        });
-        totReal[mi] = totVal > 0 && hasR ? tR / totVal * 100 * 12 : null;
+        totReal[mi] = getTotalRentAcum(allIds, _invChartActiveProps, totVal, year, mi, neta);
       }
       datasets.push(_ds('Total Portfolio Real',     totReal,               '#0f2547', false, 3.5, 4));
       datasets.push(_ds('Total Portfolio Estimado', Array(12).fill(totEst),'#5a7ab0', true,  2,   1));
@@ -4188,24 +4234,17 @@ function renderInvChart() {
       const val = VALORES_PROPIEDAD_USD[propId] || 0;
       const col = INV_COLORS[propId] || { real:'#888', est:'#bbb' };
       const lbl = INV_LABELS[propId] || (p.nombre || propId);
-      const ac  = getACSeleccionado(propId); // uses same function as all panels
+      const ac  = getACSeleccionado(propId);
       if (!ac || !val) return;
 
-      // ac.rentBruta / ac.rentNeta already computed in calcRentDesdeInicio — use as flat estimada
-      const estVal = tipo === 'bruta' ? ac.rentBruta : null; // will recalc below
+      const eP      = _lcGetObjetivo(propId, props);
       const realArr = Array(12).fill(null);
-      const estArr  = Array(12).fill(null);
-
-      // Estimada: monto contrato annualizado / valor
-      const ri2  = calcRentDesdeInicio(propId);
-      const eP   = _invEstPct(propId, ri2);
-      for (let i = 0; i < 12; i++) estArr[i] = eP;
+      const estArr  = Array(12).fill(eP);
+      const neta    = tipo === 'neta';
 
       ac.rows.forEach((r, idx) => {
         if (idx >= 12) return;
-        if (r.estado !== 'pagado') return;
-        const net = tipo === 'neta' ? (r.ingUSD - r.gasUSD) : r.ingUSD;
-        realArr[idx] = val > 0 ? net / val * 100 * 12 : null;
+        realArr[idx] = getRentaAcumIdx(ac, val, idx, neta);
       });
       datasets.push(_ds(lbl + ' Real',     realArr, col.real, false, 2.5, 3));
       datasets.push(_ds(lbl + ' Estimada', estArr,  col.est,  true,  1.5, 1));
@@ -4214,18 +4253,10 @@ function renderInvChart() {
     if (_invChartActiveProps['TOTAL']) {
       const totVal = allIds.reduce((s,id) => s + (VALORES_PROPIEDAD_USD[id]||0), 0);
       const totEst = _invTotalEstPct(allIds, props);
+      const neta   = tipo === 'neta';
       const totReal = Array(12).fill(null);
       for (let idx = 0; idx < 12; idx++) {
-        let tR = 0, hasR = false;
-        allIds.forEach(id => {
-          const ac2 = getACSeleccionado(id);
-          if (!ac2 || idx >= ac2.rows.length) return;
-          const r = ac2.rows[idx];
-          if (r.estado !== 'pagado') return;
-          hasR = true;
-          tR += tipo === 'neta' ? (r.ingUSD - r.gasUSD) : r.ingUSD;
-        });
-        totReal[idx] = totVal > 0 && hasR ? tR / totVal * 100 * 12 : null;
+        totReal[idx] = getTotalRentAcumIdx(allIds, _invChartActiveProps, totVal, idx, neta);
       }
       datasets.push(_ds('Total Portfolio Real',     totReal,               '#0f2547', false, 3.5, 4));
       datasets.push(_ds('Total Portfolio Estimado', Array(12).fill(totEst),'#5a7ab0', true,  2,   1));
@@ -4266,20 +4297,15 @@ function renderInvChart() {
       const ri  = calcRentDesdeInicio(propId);
       if (!ri || !val) return;
 
-      const eP = _invEstPct(propId, ri);
+      const eP      = _lcGetObjetivo(propId, props);
+      const neta    = tipo === 'neta';
       const realArr = [], estArr = [];
 
-      // Build a lookup map from ri.rows for fast access
-      const rowMap = {};
-      ri.rows.forEach(r => { rowMap[r.yr + '-' + r.mi] = r; });
-
       timeline.forEach(({ yr, mi }) => {
-        const row = rowMap[yr + '-' + mi];
+        const row = ri.rows.find(r => r.yr === yr && r.mi === mi);
         if (!row) { realArr.push(null); estArr.push(null); return; }
         estArr.push(eP);
-        if (row.estado !== 'pagado') { realArr.push(null); return; }
-        const net = tipo === 'neta' ? (row.ingUSD - row.gasUSD) : row.ingUSD;
-        realArr.push(val > 0 ? net / val * 100 * 12 : null);
+        realArr.push(getRentaAcum(ri, val, yr, mi, neta));
       });
 
       datasets.push(_ds(lbl + ' Real',     realArr, col.real, false, 2.5, 2));
@@ -4287,21 +4313,13 @@ function renderInvChart() {
     });
 
     if (_invChartActiveProps['TOTAL']) {
-      const totVal = allIds.reduce((s,id) => s + (VALORES_PROPIEDAD_USD[id]||0), 0);
-      const totEst = _invTotalEstPct(allIds, props);
+      const totVal  = allIds.reduce((s,id) => s + (VALORES_PROPIEDAD_USD[id]||0), 0);
+      const totEst  = _invTotalEstPct(allIds, props);
+      const neta    = tipo === 'neta';
       const totReal = [], totEstA = [];
       timeline.forEach(({ yr, mi }) => {
         totEstA.push(totEst);
-        let tR = 0, hasR = false;
-        allIds.forEach(id => {
-          const ri2 = calcRentDesdeInicio(id);
-          if (!ri2) return;
-          const row = ri2.rows.find(r => r.yr === yr && r.mi === mi);
-          if (!row || row.estado !== 'pagado') return;
-          hasR = true;
-          tR += tipo === 'neta' ? (row.ingUSD - row.gasUSD) : row.ingUSD;
-        });
-        totReal.push(totVal > 0 && hasR ? tR / totVal * 100 * 12 : null);
+        totReal.push(getTotalRentAcum(allIds, _invChartActiveProps, totVal, yr, mi, neta));
       });
       datasets.push(_ds('Total Portfolio Real',     totReal, '#0f2547', false, 3.5, 3));
       datasets.push(_ds('Total Portfolio Estimado', totEstA, '#5a7ab0', true,  2,   1));
@@ -4415,7 +4433,7 @@ function _buildInvChart(canvas, labels, datasets, periodoLabel) {
 var _lcMode        = 'anio';
 var _lcInstance    = null;
 var _lcActiveProps = {};
-var _lcMetrics     = { neta: true, bruta: false, objetivo: false, total: true };
+var _lcMetrics     = { neta: true, netaMes: false, bruta: false, brutaMes: false, objetivo: false, total: true, totalMes: false, totalAcum: true };
 
 const LC_COLORS = {
   'irigoyen':     '#1a3a6b',
@@ -4451,12 +4469,23 @@ function _lcSyncMetricBtns() {
     const sp = bNeta.querySelector('span');
     if (sp) { sp.style.background = _lcMetrics.neta ? '#fff' : '#2e7d52'; }
   }
+  const bNetaMes = document.getElementById('lc-tog-netames');
+  if (bNetaMes) {
+    bNetaMes.style.background = _lcMetrics.netaMes ? '#2e7d52' : 'transparent';
+    bNetaMes.style.color      = _lcMetrics.netaMes ? '#fff'    : '#2e7d52';
+  }
   const bBruta = document.getElementById('lc-tog-bruta');
   if (bBruta) {
     bBruta.style.background = _lcMetrics.bruta ? '#2e7d52' : 'transparent';
     bBruta.style.color      = _lcMetrics.bruta ? '#fff'    : '#2e7d52';
     const sp = bBruta.querySelector('span');
     if (sp) sp.style.borderColor = _lcMetrics.bruta ? '#fff' : '#2e7d52';
+  }
+  const bBrutaMes = document.getElementById('lc-tog-brutames');
+  if (bBrutaMes) {
+    bBrutaMes.style.background = _lcMetrics.brutaMes ? '#4a7fc1' : 'transparent';
+    bBrutaMes.style.color      = _lcMetrics.brutaMes ? '#fff'    : '#4a7fc1';
+    bBrutaMes.style.borderColor = '#4a7fc1';
   }
   const bObj = document.getElementById('lc-tog-objetivo');
   if (bObj) {
@@ -4467,12 +4496,17 @@ function _lcSyncMetricBtns() {
     const note = document.getElementById('lc-obj-note');
     if (note) note.style.display = _lcMetrics.objetivo ? '' : 'none';
   }
-  const bTot = document.getElementById('lc-tog-total');
-  if (bTot) {
-    bTot.style.background = _lcMetrics.total ? '#0f2547' : 'transparent';
-    bTot.style.color      = _lcMetrics.total ? '#fff'    : '#0f2547';
-    const sp = bTot.querySelector('span');
-    if (sp) sp.style.background = _lcMetrics.total ? '#fff' : '#0f2547';
+  const bTotAcum = document.getElementById('lc-tog-total-acum');
+  if (bTotAcum) {
+    bTotAcum.style.background = _lcMetrics.totalAcum ? '#0f2547' : 'transparent';
+    bTotAcum.style.color      = _lcMetrics.totalAcum ? '#fff'    : '#0f2547';
+    const sp = bTotAcum.querySelector('span');
+    if (sp) sp.style.background = _lcMetrics.totalAcum ? '#fff' : '#0f2547';
+  }
+  const bTotMes = document.getElementById('lc-tog-total-mes');
+  if (bTotMes) {
+    bTotMes.style.background = _lcMetrics.totalMes ? '#0f2547' : 'transparent';
+    bTotMes.style.color      = _lcMetrics.totalMes ? '#fff'    : '#0f2547';
   }
 }
 
@@ -4544,7 +4578,39 @@ function _lcDS(label, data, color, bw, pr, dashed) {
   };
 }
 
+// Línea punteada con puntos visibles — para rentabilidad individual del mes
+function _lcDSDotted(label, data, color, bw, pr) {
+  return {
+    label, data,
+    borderColor: color,
+    backgroundColor: 'transparent',
+    borderWidth: bw || 1.5,
+    borderDash: [3, 3],
+    pointRadius: pr || 2.5,
+    pointHoverRadius: (pr || 2.5) + 2,
+    tension: 0.25,
+    fill: false,
+    spanGaps: false
+  };
+}
+
 /* ── Helpers globales de rentabilidad acumulada ── */
+// Rentabilidad del mes individual (sin acumular) — ingreso del mes / valor * 12
+function getRentaMes(ri, val, yr, mi, neta) {
+  if (!ri || !val) return null;
+  const row = ri.rows.find(r => r.yr === yr && r.mi === mi);
+  if (!row || row.estado !== 'pagado') return null;
+  const base = neta ? (row.ingUSD - row.gasUSD) : row.ingUSD;
+  return base / val * 100 * 12;
+}
+
+function getRentaMesIdx(ac, val, idx, neta) {
+  if (!ac || !val || idx >= ac.rows.length) return null;
+  const row = ac.rows[idx];
+  if (!row || row.estado !== 'pagado') return null;
+  const base = neta ? (row.ingUSD - row.gasUSD) : row.ingUSD;
+  return base / val * 100 * 12;
+}
 function getRentaAcum(ri, val, upToYr, upToMi, neta) {
   if (!ri || !val) return null;
   let ac = null;
@@ -4572,6 +4638,68 @@ function getRentaAcumIdx(ac, val, upToIdx, neta) {
   if (mesesCob === 0) return null;
   const base = neta ? (ingAcum - gasAcum) : ingAcum;
   return (base / mesesCob * 12) / val * 100;
+}
+
+// Rentabilidad total del portfolio para un punto (yr,mi) — promedio ponderado por valor
+// Cada prop aporta su rentabilidad acumulada * su valor, luego se divide por totVal
+function getTotalRentAcum(allIds, activeProps, totVal, yr, mi, neta) {
+  if (!totVal) return null;
+  let sumWt = 0, hasAny = false;
+  allIds.filter(id => activeProps[id]).forEach(id => {
+    const ri2  = calcRentDesdeInicio(id);
+    const val2 = VALORES_PROPIEDAD_USD[id] || 0;
+    if (!ri2 || !val2) return;
+    const r = getRentaAcum(ri2, val2, yr, mi, neta);
+    if (r === null) return;
+    hasAny = true;
+    sumWt += r * val2;
+  });
+  return hasAny ? sumWt / totVal : null;
+}
+
+function getTotalRentAcumIdx(allIds, activeProps, totVal, idx, neta) {
+  if (!totVal) return null;
+  let sumWt = 0, hasAny = false;
+  allIds.filter(id => activeProps[id]).forEach(id => {
+    const ac2  = getACSeleccionado(id);
+    const val2 = VALORES_PROPIEDAD_USD[id] || 0;
+    if (!ac2 || !val2 || idx >= ac2.rows.length) return;
+    const r = getRentaAcumIdx(ac2, val2, idx, neta);
+    if (r === null) return;
+    hasAny = true;
+    sumWt += r * val2;
+  });
+  return hasAny ? sumWt / totVal : null;
+}
+
+function getTotalRentMes(allIds, activeProps, totVal, yr, mi, neta) {
+  if (!totVal) return null;
+  let sumWt = 0, hasAny = false;
+  allIds.filter(id => activeProps[id]).forEach(id => {
+    const ri2  = calcRentDesdeInicio(id);
+    const val2 = VALORES_PROPIEDAD_USD[id] || 0;
+    if (!ri2 || !val2) return;
+    const r = getRentaMes(ri2, val2, yr, mi, neta);
+    if (r === null) return;
+    hasAny = true;
+    sumWt += r * val2;
+  });
+  return hasAny ? sumWt / totVal : null;
+}
+
+function getTotalRentMesIdx(allIds, activeProps, totVal, idx, neta) {
+  if (!totVal) return null;
+  let sumWt = 0, hasAny = false;
+  allIds.filter(id => activeProps[id]).forEach(id => {
+    const ac2  = getACSeleccionado(id);
+    const val2 = VALORES_PROPIEDAD_USD[id] || 0;
+    if (!ac2 || !val2 || idx >= ac2.rows.length) return;
+    const r = getRentaMesIdx(ac2, val2, idx, neta);
+    if (r === null) return;
+    hasAny = true;
+    sumWt += r * val2;
+  });
+  return hasAny ? sumWt / totVal : null;
 }
 
 function renderLinechartProp() {
@@ -4616,14 +4744,28 @@ function renderLinechartProp() {
         for (let mi = 0; mi <= maxMes; mi++) {
           d[mi] = getRentaAcum(ri, val, year, mi, true);
         }
-        datasets.push(_lcDS(lbl + ' · Neta', d, col, 2.5, 3.5, false));
+        datasets.push(_lcDS(lbl + ' · Neta acum.', d, col, 2.5, 3.5, false));
+      }
+      if (_lcMetrics.netaMes) {
+        const d = Array(12).fill(null);
+        for (let mi = 0; mi <= maxMes; mi++) {
+          d[mi] = getRentaMes(ri, val, year, mi, true);
+        }
+        datasets.push(_lcDSDotted(lbl + ' · Neta mes', d, col, 1.5, 2.5));
       }
       if (_lcMetrics.bruta) {
         const d = Array(12).fill(null);
         for (let mi = 0; mi <= maxMes; mi++) {
           d[mi] = getRentaAcum(ri, val, year, mi, false);
         }
-        datasets.push(_lcDS(lbl + ' · Bruta', d, col, 1.5, 0, true));
+        datasets.push(_lcDS(lbl + ' · Bruta acum.', d, col, 1.5, 0, true));
+      }
+      if (_lcMetrics.brutaMes) {
+        const d = Array(12).fill(null);
+        for (let mi = 0; mi <= maxMes; mi++) {
+          d[mi] = getRentaMes(ri, val, year, mi, false);
+        }
+        datasets.push(_lcDSDotted(lbl + ' · Bruta mes', d, '#4a7fc1', 1.5, 2));
       }
       if (_lcMetrics.objetivo) {
         const obj = _lcGetObjetivo(propId, props);
@@ -4635,43 +4777,27 @@ function renderLinechartProp() {
       }
     });
 
-    if (_lcMetrics.total) {
+    if (_lcMetrics.totalAcum || _lcMetrics.totalMes) {
       const totVal = allIds.reduce((s, id) => s + (VALORES_PROPIEDAD_USD[id] || 0), 0);
-      const dN = _lcMetrics.neta  ? Array(12).fill(null) : null;
-      const dB = _lcMetrics.bruta ? Array(12).fill(null) : null;
-      for (let mi = 0; mi <= maxMes; mi++) {
-        let ingAcumN = 0, ingAcumB = 0, gasAcum = 0, mesesCobN = 0, mesesCobB = 0, hasAny = false;
-        allIds.filter(id => _lcActiveProps[id]).forEach(id => {
-          const ri2 = calcRentDesdeInicio(id);
-          const val2 = VALORES_PROPIEDAD_USD[id] || 0;
-          if (!ri2 || !val2) return;
-          // Acumular dentro del año contractual que contiene este mes
-          let ac2 = null;
-          for (const a of ri2.aniosContrato) {
-            if (a.rows.some(r => r.yr === year && r.mi === mi)) { ac2 = a; break; }
-          }
-          if (!ac2) return;
-          for (const r of ac2.rows) {
-            if (r.yr > year || (r.yr === year && r.mi > mi)) break;
-            if (r.estado === 'pagado') {
-              hasAny = true;
-              ingAcumB += r.ingUSD;
-              ingAcumN += r.ingUSD;
-              gasAcum  += r.gasUSD;
-              mesesCobN++; mesesCobB++;
-            }
-          }
-        });
-        if (hasAny && totVal > 0) {
-          if (dN && mesesCobN > 0) dN[mi] = (ingAcumN - gasAcum) / mesesCobN * 12 / totVal * 100;
-          if (dB && mesesCobB > 0) dB[mi] = ingAcumB / mesesCobB * 12 / totVal * 100;
+      if (_lcMetrics.totalAcum) {
+        const dN = Array(12).fill(null), dB = Array(12).fill(null);
+        for (let mi = 0; mi <= maxMes; mi++) {
+          dN[mi] = getTotalRentAcum(allIds, _lcActiveProps, totVal, year, mi, true);
+          dB[mi] = getTotalRentAcum(allIds, _lcActiveProps, totVal, year, mi, false);
         }
+        if (_lcMetrics.neta)  datasets.push(_lcDS('Total · Neta acum.',  dN, '#0f2547', 3.5, 0, false));
+        if (_lcMetrics.bruta) datasets.push(_lcDS('Total · Bruta acum.', dB, '#0f2547', 2,   0, true));
       }
-      if (dN) datasets.push(_lcDS('Total · Neta',  dN, '#0f2547', 3.5, 0, false));
-      if (dB) datasets.push(_lcDS('Total · Bruta', dB, '#0f2547', 2,   0, true));
+      if (_lcMetrics.totalMes) {
+        const dN = Array(12).fill(null), dB = Array(12).fill(null);
+        for (let mi = 0; mi <= maxMes; mi++) {
+          dN[mi] = getTotalRentMes(allIds, _lcActiveProps, totVal, year, mi, true);
+          dB[mi] = getTotalRentMes(allIds, _lcActiveProps, totVal, year, mi, false);
+        }
+        if (_lcMetrics.neta || _lcMetrics.netaMes)   datasets.push(_lcDSDotted('Total · Neta mes',  dN, '#0f2547', 2, 3));
+        if (_lcMetrics.bruta || _lcMetrics.brutaMes) datasets.push(_lcDSDotted('Total · Bruta mes', dB, '#374f6b', 1.5, 2.5));
+      }
     }
-
-  // ── AÑO DE CONTRATO ─────────────────────────────
   } else if (_lcMode === 'aniocontrato') {
     labels = Array.from({length: 12}, (_, i) => 'Mes ' + (i + 1));
 
@@ -4687,12 +4813,22 @@ function renderLinechartProp() {
       if (_lcMetrics.neta) {
         const d = Array(12).fill(null);
         ac.rows.forEach((row, idx) => { if (idx < 12) d[idx] = getRentaAcumIdx(ac, val, idx, true); });
-        datasets.push(_lcDS(lbl + ' · Neta (desde ' + startLabel + ')', d, col, 2.5, 3.5, false));
+        datasets.push(_lcDS(lbl + ' · Neta acum. (desde ' + startLabel + ')', d, col, 2.5, 3.5, false));
+      }
+      if (_lcMetrics.netaMes) {
+        const d = Array(12).fill(null);
+        ac.rows.forEach((row, idx) => { if (idx < 12) d[idx] = getRentaMesIdx(ac, val, idx, true); });
+        datasets.push(_lcDSDotted(lbl + ' · Neta mes', d, col, 1.5, 2.5));
       }
       if (_lcMetrics.bruta) {
         const d = Array(12).fill(null);
         ac.rows.forEach((row, idx) => { if (idx < 12) d[idx] = getRentaAcumIdx(ac, val, idx, false); });
-        datasets.push(_lcDS(lbl + ' · Bruta (desde ' + startLabel + ')', d, col, 1.5, 0, true));
+        datasets.push(_lcDS(lbl + ' · Bruta acum. (desde ' + startLabel + ')', d, col, 1.5, 0, true));
+      }
+      if (_lcMetrics.brutaMes) {
+        const d = Array(12).fill(null);
+        ac.rows.forEach((row, idx) => { if (idx < 12) d[idx] = getRentaMesIdx(ac, val, idx, false); });
+        datasets.push(_lcDSDotted(lbl + ' · Bruta mes', d, '#4a7fc1', 1.5, 2));
       }
       if (_lcMetrics.objetivo) {
         const obj = _lcGetObjetivo(propId, props);
@@ -4700,34 +4836,26 @@ function renderLinechartProp() {
       }
     });
 
-    if (_lcMetrics.total) {
+    if (_lcMetrics.totalAcum || _lcMetrics.totalMes) {
       const totVal = allIds.reduce((s, id) => s + (VALORES_PROPIEDAD_USD[id] || 0), 0);
-      const dN = _lcMetrics.neta  ? Array(12).fill(null) : null;
-      const dB = _lcMetrics.bruta ? Array(12).fill(null) : null;
-      for (let idx = 0; idx < 12; idx++) {
-        let ingAcumN = 0, ingAcumB = 0, gasAcum = 0, mesesCobN = 0, mesesCobB = 0, hasAny = false;
-        allIds.filter(id => _lcActiveProps[id]).forEach(id => {
-          const ac2 = getACSeleccionado(id);
-          const val2 = VALORES_PROPIEDAD_USD[id] || 0;
-          if (!ac2 || idx >= ac2.rows.length || !val2) return;
-          for (let i = 0; i <= idx && i < ac2.rows.length; i++) {
-            const r = ac2.rows[i];
-            if (r.estado === 'pagado') {
-              hasAny = true;
-              ingAcumB += r.ingUSD;
-              ingAcumN += r.ingUSD;
-              gasAcum  += r.gasUSD;
-              mesesCobN++; mesesCobB++;
-            }
-          }
-        });
-        if (hasAny && totVal > 0) {
-          if (dN && mesesCobN > 0) dN[idx] = (ingAcumN - gasAcum) / mesesCobN * 12 / totVal * 100;
-          if (dB && mesesCobB > 0) dB[idx] = ingAcumB / mesesCobB * 12 / totVal * 100;
+      if (_lcMetrics.totalAcum) {
+        const dN = Array(12).fill(null), dB = Array(12).fill(null);
+        for (let idx = 0; idx < 12; idx++) {
+          dN[idx] = getTotalRentAcumIdx(allIds, _lcActiveProps, totVal, idx, true);
+          dB[idx] = getTotalRentAcumIdx(allIds, _lcActiveProps, totVal, idx, false);
         }
+        if (_lcMetrics.neta)  datasets.push(_lcDS('Total · Neta acum.',  dN, '#0f2547', 3.5, 0, false));
+        if (_lcMetrics.bruta) datasets.push(_lcDS('Total · Bruta acum.', dB, '#0f2547', 2,   0, true));
       }
-      if (dN) datasets.push(_lcDS('Total · Neta',  dN, '#0f2547', 3.5, 0, false));
-      if (dB) datasets.push(_lcDS('Total · Bruta', dB, '#0f2547', 2,   0, true));
+      if (_lcMetrics.totalMes) {
+        const dN = Array(12).fill(null), dB = Array(12).fill(null);
+        for (let idx = 0; idx < 12; idx++) {
+          dN[idx] = getTotalRentMesIdx(allIds, _lcActiveProps, totVal, idx, true);
+          dB[idx] = getTotalRentMesIdx(allIds, _lcActiveProps, totVal, idx, false);
+        }
+        if (_lcMetrics.neta || _lcMetrics.netaMes)   datasets.push(_lcDSDotted('Total · Neta mes',  dN, '#0f2547', 2, 3));
+        if (_lcMetrics.bruta || _lcMetrics.brutaMes) datasets.push(_lcDSDotted('Total · Bruta mes', dB, '#374f6b', 1.5, 2.5));
+      }
     }
 
   // ── DESDE CONTRATO ──────────────────────────────
@@ -4759,10 +4887,16 @@ function renderLinechartProp() {
       if (!ri || !val) return;
 
       if (_lcMetrics.neta) {
-        datasets.push(_lcDS(lbl + ' · Neta',  timeline.map(({yr,mi}) => getRentaAcum(ri, val, yr, mi, true)),  col, 2.5, 3, false));
+        datasets.push(_lcDS(lbl + ' · Neta acum.',  timeline.map(({yr,mi}) => getRentaAcum(ri, val, yr, mi, true)),  col, 2.5, 3, false));
+      }
+      if (_lcMetrics.netaMes) {
+        datasets.push(_lcDSDotted(lbl + ' · Neta mes', timeline.map(({yr,mi}) => getRentaMes(ri, val, yr, mi, true)), col, 1.5, 2.5));
       }
       if (_lcMetrics.bruta) {
-        datasets.push(_lcDS(lbl + ' · Bruta', timeline.map(({yr,mi}) => getRentaAcum(ri, val, yr, mi, false)), col, 1.5, 0, true));
+        datasets.push(_lcDS(lbl + ' · Bruta acum.', timeline.map(({yr,mi}) => getRentaAcum(ri, val, yr, mi, false)), col, 1.5, 0, true));
+      }
+      if (_lcMetrics.brutaMes) {
+        datasets.push(_lcDSDotted(lbl + ' · Bruta mes', timeline.map(({yr,mi}) => getRentaMes(ri, val, yr, mi, false)), '#4a7fc1', 1.5, 2));
       }
       if (_lcMetrics.objetivo) {
         const obj = _lcGetObjetivo(propId, props);
@@ -4775,39 +4909,26 @@ function renderLinechartProp() {
       }
     });
 
-    if (_lcMetrics.total) {
+    if (_lcMetrics.totalAcum || _lcMetrics.totalMes) {
       const totVal = allIds.reduce((s, id) => s + (VALORES_PROPIEDAD_USD[id] || 0), 0);
-      const dN = _lcMetrics.neta  ? [] : null;
-      const dB = _lcMetrics.bruta ? [] : null;
-      timeline.forEach(({yr, mi}) => {
-        let ingAcumN = 0, ingAcumB = 0, gasAcum = 0, mesesCobN = 0, mesesCobB = 0, hasAny = false;
-        allIds.filter(id => _lcActiveProps[id]).forEach(id => {
-          const ri2 = calcRentDesdeInicio(id);
-          const val2 = VALORES_PROPIEDAD_USD[id] || 0;
-          if (!ri2 || !val2) return;
-          let ac2 = null;
-          for (const a of ri2.aniosContrato) {
-            if (a.rows.some(r => r.yr === yr && r.mi === mi)) { ac2 = a; break; }
-          }
-          if (!ac2) return;
-          for (const r of ac2.rows) {
-            if (r.yr > yr || (r.yr === yr && r.mi > mi)) break;
-            if (r.estado === 'pagado') {
-              hasAny = true;
-              ingAcumB += r.ingUSD;
-              ingAcumN += r.ingUSD;
-              gasAcum  += r.gasUSD;
-              mesesCobN++; mesesCobB++;
-            }
-          }
+      if (_lcMetrics.totalAcum) {
+        const dN = [], dB = [];
+        timeline.forEach(({yr, mi}) => {
+          dN.push(getTotalRentAcum(allIds, _lcActiveProps, totVal, yr, mi, true));
+          dB.push(getTotalRentAcum(allIds, _lcActiveProps, totVal, yr, mi, false));
         });
-        const n = hasAny && totVal > 0 && mesesCobN > 0 ? (ingAcumN - gasAcum) / mesesCobN * 12 / totVal * 100 : null;
-        const b = hasAny && totVal > 0 && mesesCobB > 0 ? ingAcumB / mesesCobB * 12 / totVal * 100 : null;
-        if (dN) dN.push(n);
-        if (dB) dB.push(b);
-      });
-      if (dN) datasets.push(_lcDS('Total · Neta',  dN, '#0f2547', 3.5, 0, false));
-      if (dB) datasets.push(_lcDS('Total · Bruta', dB, '#0f2547', 2,   0, true));
+        if (_lcMetrics.neta)  datasets.push(_lcDS('Total · Neta acum.',  dN, '#0f2547', 3.5, 0, false));
+        if (_lcMetrics.bruta) datasets.push(_lcDS('Total · Bruta acum.', dB, '#0f2547', 2,   0, true));
+      }
+      if (_lcMetrics.totalMes) {
+        const dN = [], dB = [];
+        timeline.forEach(({yr, mi}) => {
+          dN.push(getTotalRentMes(allIds, _lcActiveProps, totVal, yr, mi, true));
+          dB.push(getTotalRentMes(allIds, _lcActiveProps, totVal, yr, mi, false));
+        });
+        if (_lcMetrics.neta || _lcMetrics.netaMes)   datasets.push(_lcDSDotted('Total · Neta mes',  dN, '#0f2547', 2, 3));
+        if (_lcMetrics.bruta || _lcMetrics.brutaMes) datasets.push(_lcDSDotted('Total · Bruta mes', dB, '#374f6b', 1.5, 2.5));
+      }
     }
   }
 
@@ -4824,16 +4945,29 @@ function renderLinechartProp() {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#fff', titleColor: '#1a1814', bodyColor: textCol,
-          borderColor: '#e8e4dc', borderWidth: 1, padding: 12,
-          filter: item => item.parsed.y !== null,
-          callbacks: {
-            title: items => items[0]?.label || '',
-            label: ctx => {
-              if (ctx.parsed.y === null) return null;
-              const isObj = ctx.dataset.label.includes('Objetivo');
-              return (isObj ? '  🎯 ' : '  ') + ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%';
-            }
+          enabled: false,
+          external: function(context) {
+            const panel = document.getElementById('lc-tooltip-panel');
+            const titleEl = document.getElementById('lc-tooltip-title');
+            const bodyEl  = document.getElementById('lc-tooltip-body');
+            if (!panel) return;
+            if (context.tooltip.opacity === 0) { panel.style.display = 'none'; return; }
+            const items = context.tooltip.dataPoints || [];
+            if (!items.length) { panel.style.display = 'none'; return; }
+            titleEl.textContent = items[0].label || '';
+            bodyEl.innerHTML = items
+              .filter(item => item.parsed.y !== null && item.parsed.y !== undefined)
+              .map(item => {
+                const color = item.dataset.borderColor || '#888';
+                const val = item.parsed.y.toFixed(2) + '%';
+                const isObj = item.dataset.label.includes('Objetivo');
+                return `<div style="display:flex;align-items:center;gap:8px;">
+                  <span style="width:14px;height:3px;background:${color};border-radius:2px;flex-shrink:0;display:inline-block;"></span>
+                  <span style="font-size:0.78rem;color:#5c574e;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${isObj ? '🎯 ' : ''}${item.dataset.label}</span>
+                  <span style="font-size:1.05rem;font-weight:800;color:${color};white-space:nowrap;">${val}</span>
+                </div>`;
+              }).join('');
+            panel.style.display = 'block';
           }
         }
       },
@@ -4866,10 +5000,11 @@ function renderLinechartProp() {
     </div>`;
   });
 
-  const totRow = _lcMetrics.total ? `<div style="display:flex;align-items:center;gap:7px;background:#0f254712;padding:5px 12px;border-radius:8px;font-size:0.74rem;border:1px solid #0f254730;">
+  const hasTot = _lcMetrics.totalAcum || _lcMetrics.totalMes;
+  const totRow = hasTot ? `<div style="display:flex;align-items:center;gap:7px;background:#0f254712;padding:5px 12px;border-radius:8px;font-size:0.74rem;border:1px solid #0f254730;">
     <span style="font-weight:800;color:#0f2547;">Portfolio</span>
-    ${_lcMetrics.neta  ? `<span style="width:16px;height:3px;background:#0f2547;border-radius:2px;display:inline-block;"></span><span style="color:var(--text3);">Neta</span>` : ''}
-    ${_lcMetrics.bruta ? `<span style="width:16px;border-top:2px dashed #0f2547;display:inline-block;"></span><span style="color:var(--text3);">Bruta</span>` : ''}
+    ${_lcMetrics.totalAcum ? `<span style="width:16px;height:3px;background:#0f2547;border-radius:2px;display:inline-block;"></span><span style="color:var(--text3);">Acum.</span>` : ''}
+    ${_lcMetrics.totalMes  ? `<span style="width:16px;border-top:2.5px dotted #0f2547;display:inline-block;"></span><span style="color:var(--text3);">Mes</span>` : ''}
   </div>` : '';
 
   legendEl.innerHTML = [...propRows, totRow].join('');
@@ -5814,6 +5949,113 @@ function setTableMode(mode) {
   renderAllPropsTable();
 }
 
+
+/* ═══════════════════════════════════════════════
+   DASHBOARD — CARDS DE RENTABILIDAD E INGRESOS POR DEPTO
+═══════════════════════════════════════════════ */
+function renderDashRentCards() {
+  const el = document.getElementById('dash-rent-cards');
+  if (!el) return;
+  const props   = getProperties();
+  const allIds  = Object.keys(VALORES_PROPIEDAD_USD);
+  const MESES_L = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const now     = new Date();
+
+  const cards = allIds.map(propId => {
+    const p   = props[propId] || {};
+    const val = VALORES_PROPIEDAD_USD[propId] || 0;
+    const col = INV_COLORS[propId]?.real || '#1a3a6b';
+    const lbl = INV_LABELS[propId] || p.nombre || propId;
+    const ri  = calcRentDesdeInicio(propId);
+    if (!ri || !val) return '';
+
+    // Rentabilidades acumuladas (último mes cobrado del año contractual en curso)
+    const ac = getACSeleccionado(propId);
+    let rentNeta = null, rentBruta = null;
+    if (ac) {
+      const lastPaid = [...ac.rows].reverse().find(r => r.estado === 'pagado');
+      if (lastPaid) {
+        rentNeta  = getRentaAcum(ri, val, lastPaid.yr, lastPaid.mi, true);
+        rentBruta = getRentaAcum(ri, val, lastPaid.yr, lastPaid.mi, false);
+      }
+    }
+
+    // Objetivo
+    const obj = _lcGetObjetivo(propId, props);
+
+    // Ingreso esperado (primer mes del contrato en USD, plano)
+    const primerRow = ri.rows[0];
+    let ingEsperado = null;
+    if (primerRow) {
+      const moneda = primerRow.monedaLocal || p.moneda || 'ARS';
+      const monto  = parseNum(primerRow.monto);
+      if (monto) {
+        if (moneda === 'USD') ingEsperado = monto;
+        else {
+          const tc = _rcGetTC(propId, primerRow.yr, primerRow.mi);
+          ingEsperado = tc > 0 ? Math.round(monto / tc) : null;
+        }
+      }
+    }
+
+    // Último ingreso bruto cobrado
+    const lastRow = [...ri.rows].reverse().find(r => r.estado === 'pagado');
+    const ingBruto = lastRow ? lastRow.ingUSD : null;
+    const ingNeto  = lastRow ? (lastRow.ingUSD - lastRow.gasUSD) : null;
+    const lastLabel = lastRow ? MESES_L[lastRow.mi] + ' ' + lastRow.yr : null;
+
+    const pctColor  = (v, ref) => v === null ? '#9b9590' : (v >= ref ? '#2e7d52' : '#c0392b');
+    const pctStr    = v => v !== null ? (v >= 0 ? '+' : '') + v.toFixed(2) + '%' : '—';
+    const usdStr    = v => v !== null ? 'USD ' + Math.round(v).toLocaleString('es-AR') : '—';
+
+    const rentNetaColor  = pctColor(rentNeta,  obj);
+    const rentBrutaColor = pctColor(rentBruta, obj);
+
+    return `<div style="background:#fff;border:1.5px solid ${col}22;border-radius:14px;padding:16px 20px;min-width:0;box-shadow:0 2px 10px rgba(0,0,0,0.06);cursor:pointer;" onclick="loadProperty('${propId}')">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <span style="width:10px;height:10px;border-radius:50%;background:${col};display:inline-block;flex-shrink:0;"></span>
+        <span style="font-family:'Sora',sans-serif;font-weight:800;font-size:0.88rem;color:${col};">${lbl}</span>
+        ${lastLabel ? `<span style="font-size:0.7rem;color:#9b9590;margin-left:auto;">${lastLabel}</span>` : ''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div style="background:#f4f2ee;border-radius:8px;padding:8px 10px;text-align:center;">
+          <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9b9590;margin-bottom:2px;">Rent. Neta</div>
+          <div style="font-size:1.25rem;font-weight:900;color:${rentNetaColor};letter-spacing:-0.02em;">${pctStr(rentNeta)}</div>
+        </div>
+        <div style="background:#f4f2ee;border-radius:8px;padding:8px 10px;text-align:center;">
+          <div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9b9590;margin-bottom:2px;">Rent. Bruta</div>
+          <div style="font-size:1.25rem;font-weight:900;color:${rentBrutaColor};letter-spacing:-0.02em;">${pctStr(rentBruta)}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#e8eef8;border-radius:8px;margin-bottom:8px;">
+        <span style="font-size:0.65rem;font-weight:700;color:#1a3a6b;text-transform:uppercase;letter-spacing:0.05em;">🎯 Objetivo</span>
+        <span style="font-size:0.95rem;font-weight:800;color:#1a3a6b;margin-left:auto;">${pctStr(obj)}</span>
+      </div>
+      <div style="border-top:1px solid #e8e4dc;padding-top:8px;display:flex;flex-direction:column;gap:4px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.7rem;color:#9b9590;font-weight:600;">Ing. Esperado</span>
+          <span style="font-size:0.82rem;font-weight:700;color:#7a9fd4;">${usdStr(ingEsperado)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.7rem;color:#9b9590;font-weight:600;">Ing. Bruto cobrado</span>
+          <span style="font-size:0.82rem;font-weight:700;color:${col};">${usdStr(ingBruto)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.7rem;color:#9b9590;font-weight:600;">Ing. Neto</span>
+          <span style="font-size:0.82rem;font-weight:700;color:${ingNeto !== null && ingNeto >= 0 ? '#2e7d52' : '#c0392b'};">${usdStr(ingNeto)}</span>
+        </div>
+      </div>
+    </div>`;
+  }).filter(Boolean);
+
+  if (!cards.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML = `
+    <div style="font-family:'Playfair Display',serif;font-weight:400;font-size:1.1rem;margin-bottom:12px;">📈 Rentabilidad e Ingresos por Propiedad</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;">
+      ${cards.join('')}
+    </div>`;
+}
 
 function renderDashboard() {
   const props = getProperties();
@@ -10125,7 +10367,7 @@ function generarExpensasPDF() {
 var _bcInstance      = null;
 var _bcMode          = 'anio';       // 'anio' | 'aniocontrato' | 'contrato'
 var _bcActiveProp    = null;         // propId seleccionado (single-select)
-var _bcMetrics       = { barras: true, neta: true, bruta: false, objetivo: false };
+var _bcMetrics       = { ingEsperado: true, ingBruto: true, ingNeto: true, neta: true, netaMes: false, bruta: false, brutaMes: false, objetivo: false };
 
 /* ── Sincronizar botones de modo ──────────────── */
 function _bcSyncModeBtns() {
@@ -10157,22 +10399,24 @@ function _bcToggleMetric(key) {
 
 function _bcSyncMetricBtns() {
   const cfgs = {
-    barras:   { id: 'bc-tog-barras',   color: '#1a3a6b' },
-    neta:     { id: 'bc-tog-neta',     color: '#2e7d52' },
-    bruta:    { id: 'bc-tog-bruta',    color: '#4a7fc1' },
-    objetivo: { id: 'bc-tog-objetivo', color: '#9b9590' },
+    ingEsperado: { id: 'bc-tog-ingEsperado', color: '#7a9fd4', solid: true },
+    ingBruto:    { id: 'bc-tog-ingBruto',    color: '#1a3a6b', solid: true },
+    ingNeto:     { id: 'bc-tog-ingNeto',     color: '#2e7d52', solid: true },
+    neta:        { id: 'bc-tog-neta',        color: '#2e7d52', solid: false },
+    netaMes:     { id: 'bc-tog-netaMes',     color: '#2e7d52', solid: false },
+    bruta:       { id: 'bc-tog-bruta',       color: '#4a7fc1', solid: false },
+    brutaMes:    { id: 'bc-tog-brutaMes',    color: '#4a7fc1', solid: false },
+    objetivo:    { id: 'bc-tog-objetivo',    color: '#9b9590', solid: false },
   };
   Object.entries(cfgs).forEach(([key, cfg]) => {
     const b = document.getElementById(cfg.id);
     if (!b) return;
     const on = _bcMetrics[key];
-    b.style.background = on ? cfg.color : 'transparent';
-    b.style.color      = on ? '#fff'    : cfg.color;
+    b.style.background  = on ? cfg.color : 'transparent';
+    b.style.color       = on ? '#fff'    : cfg.color;
     b.style.borderColor = cfg.color;
-    // sync indicator span
     const sp = b.querySelector('span');
-    if (sp && key === 'barras') sp.style.background = on ? '#fff' : cfg.color;
-    else if (sp && (key === 'neta')) sp.style.background = on ? '#fff' : cfg.color;
+    if (sp && cfg.solid) sp.style.background = on ? '#fff' : cfg.color;
   });
 }
 
@@ -10241,8 +10485,10 @@ function renderBarChartProp() {
   let labels = [];
   // Arrays para barras (ingresos)
   let ingEsperadoArr = [], ingBrutoArr = [], ingNetoArr = [];
-  // Arrays para líneas (rentabilidad)
-  let rentNetaArr = [], rentBrutaArr = [], rentObjetivoArr = [];
+  // Arrays para líneas (rentabilidad mensual)
+  let rentNetaMesArr = [], rentBrutaMesArr = [], rentObjetivoArr = [];
+  // Arrays para líneas (rentabilidad acumulada)
+  let rentNetaAcumArr = [], rentBrutaAcumArr = [];
 
   /* ── Helpers ───────────────────────────────── */
   // Ingreso esperado = monto del PRIMER mes del contrato en USD (línea plana)
@@ -10263,6 +10509,13 @@ function renderBarChartProp() {
     return row ? _ingEsperadoUSD : null;
   }
 
+  // Rentabilidad del mes solo: ingreso de ese mes / valor propiedad * 12
+  function getRentMes(row, neta) {
+    if (!row || row.estado !== 'pagado' || !val) return null;
+    const base = neta ? (row.ingUSD - row.gasUSD) : row.ingUSD;
+    return base / val * 100 * 12;
+  }
+
   // Rentabilidad acumulada del año contractual hasta ese mes
   function getRentAcum(yr, mi, neta) {
     return getRentaAcum(ri, val, yr, mi, neta);
@@ -10281,8 +10534,10 @@ function renderBarChartProp() {
       ingEsperadoArr.push(inRange ? (getIngEsperado(year, mi) || null) : null);
       ingBrutoArr.push(pagado ? row.ingUSD : null);
       ingNetoArr.push(pagado ? (row.ingUSD - row.gasUSD) : null);
-      rentNetaArr.push(inRange ? getRentAcum(year, mi, true) : null);
-      rentBrutaArr.push(inRange ? getRentAcum(year, mi, false) : null);
+      rentNetaMesArr.push(getRentMes(row, true));
+      rentBrutaMesArr.push(getRentMes(row, false));
+      rentNetaAcumArr.push(inRange ? getRentAcum(year, mi, true) : null);
+      rentBrutaAcumArr.push(inRange ? getRentAcum(year, mi, false) : null);
       rentObjetivoArr.push(inRange ? objPct : null);
     }
 
@@ -10297,13 +10552,15 @@ function renderBarChartProp() {
       ingEsperadoArr.push(getIngEsperado(row.yr, row.mi) || null);
       ingBrutoArr.push(pagado ? row.ingUSD : null);
       ingNetoArr.push(pagado ? (row.ingUSD - row.gasUSD) : null);
+      rentNetaMesArr.push(getRentMes(row, true));
+      rentBrutaMesArr.push(getRentMes(row, false));
       // Rentabilidad acumulada hasta ese índice dentro del año contractual
       let ingA = 0, gasA = 0, mC = 0;
       for (let i = 0; i <= idx; i++) {
         if (ac.rows[i].estado === 'pagado') { ingA += ac.rows[i].ingUSD; gasA += ac.rows[i].gasUSD; mC++; }
       }
-      rentNetaArr.push(mC > 0 && val > 0 ? (ingA - gasA) / mC * 12 / val * 100 : null);
-      rentBrutaArr.push(mC > 0 && val > 0 ? ingA / mC * 12 / val * 100 : null);
+      rentNetaAcumArr.push(mC > 0 && val > 0 ? (ingA - gasA) / mC * 12 / val * 100 : null);
+      rentBrutaAcumArr.push(mC > 0 && val > 0 ? ingA / mC * 12 / val * 100 : null);
       rentObjetivoArr.push(objPct);
     });
 
@@ -10327,112 +10584,41 @@ function renderBarChartProp() {
       ingEsperadoArr.push(row ? (getIngEsperado(yr, mi) || null) : null);
       ingBrutoArr.push(pagado ? row.ingUSD : null);
       ingNetoArr.push(pagado ? (row.ingUSD - row.gasUSD) : null);
-      rentNetaArr.push(row ? getRentAcum(yr, mi, true) : null);
-      rentBrutaArr.push(row ? getRentAcum(yr, mi, false) : null);
+      rentNetaMesArr.push(getRentMes(row, true));
+      rentBrutaMesArr.push(getRentMes(row, false));
+      rentNetaAcumArr.push(row ? getRentAcum(yr, mi, true) : null);
+      rentBrutaAcumArr.push(row ? getRentAcum(yr, mi, false) : null);
       rentObjetivoArr.push(row ? objPct : null);
     });
   }
 
   /* ── Construir datasets ────────────────────── */
   const datasets = [];
+  const hasAnyBar = _bcMetrics.ingEsperado || _bcMetrics.ingBruto || _bcMetrics.ingNeto;
+  const hasAnyLine = _bcMetrics.neta || _bcMetrics.netaMes || _bcMetrics.bruta || _bcMetrics.brutaMes || _bcMetrics.objetivo;
 
   // ── BARRAS (eje Y izquierdo = USD) ──
-  if (_bcMetrics.barras) {
-    datasets.push({
-      type: 'bar',
-      label: 'Ing. Esperado',
-      data: ingEsperadoArr,
-      backgroundColor: col.est + 'aa',
-      borderColor: col.est,
-      borderWidth: 1.5,
-      borderRadius: 4,
-      yAxisID: 'yUSD',
-      order: 3,
-    });
-    datasets.push({
-      type: 'bar',
-      label: 'Ing. Bruto cobrado',
-      data: ingBrutoArr,
-      backgroundColor: col.real + 'cc',
-      borderColor: col.real,
-      borderWidth: 1.5,
-      borderRadius: 4,
-      yAxisID: 'yUSD',
-      order: 2,
-    });
-    datasets.push({
-      type: 'bar',
-      label: 'Ing. Neto',
-      data: ingNetoArr,
-      backgroundColor: '#2e7d52cc',
-      borderColor: '#2e7d52',
-      borderWidth: 1.5,
-      borderRadius: 4,
-      yAxisID: 'yUSD',
-      order: 1,
-    });
+  if (_bcMetrics.ingEsperado) {
+    datasets.push({ type:'bar', label:'Ing. Esperado',      data: ingEsperadoArr, backgroundColor:'#7a9fd4aa', borderColor:'#7a9fd4', borderWidth:1.5, borderRadius:4, yAxisID:'yUSD', order:4 });
+  }
+  if (_bcMetrics.ingBruto) {
+    datasets.push({ type:'bar', label:'Ing. Bruto cobrado', data: ingBrutoArr,    backgroundColor: col.real+'cc', borderColor: col.real, borderWidth:1.5, borderRadius:4, yAxisID:'yUSD', order:3 });
+  }
+  if (_bcMetrics.ingNeto) {
+    datasets.push({ type:'bar', label:'Ing. Neto',          data: ingNetoArr,     backgroundColor:'#2e7d52cc', borderColor:'#2e7d52', borderWidth:1.5, borderRadius:4, yAxisID:'yUSD', order:2 });
   }
 
   // ── LÍNEAS (eje Y derecho = %) ──
-  if (_bcMetrics.neta) {
-    datasets.push({
-      type: 'line',
-      label: 'Rent. Neta',
-      data: rentNetaArr,
-      borderColor: '#2e7d52',
-      backgroundColor: 'transparent',
-      borderWidth: 2.5,
-      pointRadius: 3,
-      pointHoverRadius: 5,
-      tension: 0.35,
-      fill: false,
-      yAxisID: 'yPct',
-      order: 0,
-      spanGaps: false,
-    });
-  }
-  if (_bcMetrics.bruta) {
-    datasets.push({
-      type: 'line',
-      label: 'Rent. Bruta',
-      data: rentBrutaArr,
-      borderColor: '#4a7fc1',
-      backgroundColor: 'transparent',
-      borderWidth: 2,
-      borderDash: [6, 4],
-      pointRadius: 2,
-      pointHoverRadius: 4,
-      tension: 0.35,
-      fill: false,
-      yAxisID: 'yPct',
-      order: 0,
-      spanGaps: false,
-    });
-  }
-  if (_bcMetrics.objetivo) {
-    datasets.push({
-      type: 'line',
-      label: '🎯 Objetivo',
-      data: rentObjetivoArr,
-      borderColor: '#9b9590',
-      backgroundColor: 'transparent',
-      borderWidth: 1.5,
-      borderDash: [8, 5],
-      pointRadius: 0,
-      pointHoverRadius: 4,
-      tension: 0,
-      fill: false,
-      yAxisID: 'yPct',
-      order: 0,
-      spanGaps: true,
-    });
-  }
+  const lineBase = { type:'line', backgroundColor:'transparent', fill:false, yAxisID:'yPct', order:0, spanGaps:false };
+  if (_bcMetrics.neta)     datasets.push({ ...lineBase, label:'Rent. Neta acum.',  data: rentNetaAcumArr,  borderColor:'#2e7d52', borderWidth:2.5, borderDash:[],     pointRadius:3, pointHoverRadius:5, tension:0.35 });
+  if (_bcMetrics.netaMes)  datasets.push({ ...lineBase, label:'Rent. Neta mes',    data: rentNetaMesArr,   borderColor:'#2e7d52', borderWidth:1.5, borderDash:[3,3],  pointRadius:2.5, pointHoverRadius:4.5, tension:0.25 });
+  if (_bcMetrics.bruta)    datasets.push({ ...lineBase, label:'Rent. Bruta acum.', data: rentBrutaAcumArr, borderColor:'#4a7fc1', borderWidth:2,   borderDash:[6,4],  pointRadius:2, pointHoverRadius:4, tension:0.35 });
+  if (_bcMetrics.brutaMes) datasets.push({ ...lineBase, label:'Rent. Bruta mes',   data: rentBrutaMesArr,  borderColor:'#4a7fc1', borderWidth:1.5, borderDash:[3,3],  pointRadius:2.5, pointHoverRadius:4.5, tension:0.25 });
+  if (_bcMetrics.objetivo) datasets.push({ ...lineBase, label:'🎯 Objetivo',        data: rentObjetivoArr,  borderColor:'#9b9590', borderWidth:1.5, borderDash:[8,5],  pointRadius:0, pointHoverRadius:4, tension:0, spanGaps:true });
 
   /* ── Destruir y crear chart ─────────────────── */
   if (_bcInstance) { _bcInstance.destroy(); _bcInstance = null; }
-
-  const textCol = '#5c574e';
-  const gridCol = 'rgba(0,0,0,0.05)';
+  const textCol = '#5c574e', gridCol = 'rgba(0,0,0,0.05)';
 
   _bcInstance = new Chart(canvas, {
     data: { labels, datasets },
@@ -10443,66 +10629,51 @@ function renderBarChartProp() {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#fff',
-          titleColor: '#1a1814',
-          bodyColor: textCol,
-          borderColor: '#e8e4dc',
-          borderWidth: 1,
-          padding: 12,
-          filter: item => item.parsed.y !== null && item.parsed.y !== undefined,
-          callbacks: {
-            title: items => items[0]?.label || '',
-            label: ctx => {
-              if (ctx.parsed.y === null || ctx.parsed.y === undefined) return null;
-              const isLine = ctx.dataset.type === 'line' || ctx.dataset.yAxisID === 'yPct';
-              if (isLine) return ' ' + ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%';
-              return ' ' + ctx.dataset.label + ': USD ' + Math.round(ctx.parsed.y).toLocaleString('es-AR');
-            },
-          },
+          enabled: false,
+          external: function(context) {
+            const panel = document.getElementById('bc-tooltip-panel');
+            const titleEl = document.getElementById('bc-tooltip-title');
+            const bodyEl  = document.getElementById('bc-tooltip-body');
+            if (!panel) return;
+            if (context.tooltip.opacity === 0) { panel.style.display = 'none'; return; }
+            const items = context.tooltip.dataPoints || [];
+            if (!items.length) { panel.style.display = 'none'; return; }
+            titleEl.textContent = items[0].label || '';
+            bodyEl.innerHTML = items
+              .filter(item => item.parsed.y !== null && item.parsed.y !== undefined)
+              .map(item => {
+                const color = item.dataset.borderColor || item.dataset.backgroundColor?.replace(/[a-f0-9]{2}$/i,'') || '#888';
+                const isPct = item.dataset.yAxisID === 'yPct';
+                const val = isPct
+                  ? item.parsed.y.toFixed(2) + '%'
+                  : 'USD ' + Math.round(item.parsed.y).toLocaleString('es-AR');
+                const isObj = item.dataset.label.includes('Objetivo');
+                return `<div style="display:flex;align-items:center;gap:8px;">
+                  <span style="width:12px;height:12px;background:${item.dataset.backgroundColor || color};border-radius:${isPct ? '0' : '3px'};flex-shrink:0;display:inline-block;${isPct ? 'height:3px;' : ''}"></span>
+                  <span style="font-size:0.78rem;color:#5c574e;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${isObj ? '🎯 ' : ''}${item.dataset.label}</span>
+                  <span style="font-size:1.05rem;font-weight:800;color:${isPct ? item.dataset.borderColor : '#1a3a6b'};white-space:nowrap;">${val}</span>
+                </div>`;
+              }).join('');
+            panel.style.display = 'block';
+          }
         },
       },
       scales: {
         x: {
           grid: { color: gridCol },
-          ticks: {
-            color: textCol,
-            font: { size: 11, family: "'Plus Jakarta Sans', sans-serif", weight: '600' },
-            maxRotation: labels.length > 14 ? 45 : 0,
-          },
+          ticks: { color: textCol, font: { size: 11, family: "'Plus Jakarta Sans', sans-serif", weight: '600' }, maxRotation: labels.length > 14 ? 45 : 0 },
         },
         yUSD: {
-          type: 'linear',
-          position: 'left',
-          display: _bcMetrics.barras,
+          type: 'linear', position: 'left', display: hasAnyBar,
           grid: { color: gridCol },
-          ticks: {
-            color: textCol,
-            font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" },
-            callback: v => 'USD ' + Math.round(v).toLocaleString('es-AR'),
-          },
-          title: {
-            display: true,
-            text: 'Ingresos (USD)',
-            color: textCol,
-            font: { size: 11, weight: '600' },
-          },
+          ticks: { color: textCol, font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" }, callback: v => 'USD ' + Math.round(v).toLocaleString('es-AR') },
+          title: { display: true, text: 'Ingresos (USD)', color: textCol, font: { size: 11, weight: '600' } },
         },
         yPct: {
-          type: 'linear',
-          position: 'right',
-          display: _bcMetrics.neta || _bcMetrics.bruta || _bcMetrics.objetivo,
-          grid: { drawOnChartArea: !_bcMetrics.barras, color: gridCol },
-          ticks: {
-            color: textCol,
-            font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" },
-            callback: v => v.toFixed(1) + '%',
-          },
-          title: {
-            display: true,
-            text: 'Rentabilidad anualizada (%)',
-            color: textCol,
-            font: { size: 11, weight: '600' },
-          },
+          type: 'linear', position: 'right', display: hasAnyLine,
+          grid: { drawOnChartArea: !hasAnyBar, color: gridCol },
+          ticks: { color: textCol, font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" }, callback: v => v.toFixed(1) + '%' },
+          title: { display: true, text: 'Rentabilidad anualizada (%)', color: textCol, font: { size: 11, weight: '600' } },
         },
       },
     },
@@ -10512,14 +10683,14 @@ function renderBarChartProp() {
   const legendEl = document.getElementById('bc-prop-legend');
   if (legendEl) {
     const items = [];
-    if (_bcMetrics.barras) {
-      items.push(`<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:${col.est};display:inline-block;"></span>Ing. Esperado</span>`);
-      items.push(`<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:${col.real};display:inline-block;"></span>Ing. Bruto cobrado</span>`);
-      items.push(`<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#2e7d52;display:inline-block;"></span>Ing. Neto</span>`);
-    }
-    if (_bcMetrics.neta)     items.push(`<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:20px;height:2.5px;background:#2e7d52;border-radius:2px;display:inline-block;"></span>Rent. Neta</span>`);
-    if (_bcMetrics.bruta)    items.push(`<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:20px;border-top:2.5px dashed #4a7fc1;display:inline-block;"></span>Rent. Bruta</span>`);
-    if (_bcMetrics.objetivo) items.push(`<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:20px;border-top:2px dashed #9b9590;display:inline-block;"></span>🎯 Objetivo</span>`);
+    if (_bcMetrics.ingEsperado) items.push(`<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#7a9fd4;display:inline-block;"></span>Ing. Esperado</span>`);
+    if (_bcMetrics.ingBruto)    items.push(`<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:${col.real};display:inline-block;"></span>Ing. Bruto cobrado</span>`);
+    if (_bcMetrics.ingNeto)     items.push(`<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#2e7d52;display:inline-block;"></span>Ing. Neto</span>`);
+    if (_bcMetrics.neta)        items.push(`<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:20px;height:2.5px;background:#2e7d52;border-radius:2px;display:inline-block;"></span>Rent. Neta acum.</span>`);
+    if (_bcMetrics.netaMes)     items.push(`<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:20px;border-top:2.5px dotted #2e7d52;display:inline-block;"></span>Rent. Neta mes</span>`);
+    if (_bcMetrics.bruta)       items.push(`<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:20px;border-top:2.5px dashed #4a7fc1;display:inline-block;"></span>Rent. Bruta acum.</span>`);
+    if (_bcMetrics.brutaMes)    items.push(`<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:20px;border-top:2px dotted #4a7fc1;display:inline-block;"></span>Rent. Bruta mes</span>`);
+    if (_bcMetrics.objetivo)    items.push(`<span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:20px;border-top:2px dashed #9b9590;display:inline-block;"></span>🎯 Objetivo</span>`);
     legendEl.innerHTML = items.join('');
   }
 }
