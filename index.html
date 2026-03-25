@@ -10245,8 +10245,23 @@ function renderBarChartProp() {
   let rentNetaArr = [], rentBrutaArr = [], rentObjetivoArr = [];
 
   /* ── Helpers ───────────────────────────────── */
-  // Ingreso esperado = monto contrato en USD para ese mes
+  // Ingreso esperado = monto vigente del mes (con ajustes IPC ya aplicados),
+  // convertido a USD con el TC de ese mes. Usa el row de ri si existe,
+  // si no cae al monto original del contrato.
   function getIngEsperado(yr, mi) {
+    const row = ri.rows.find(r => r.yr === yr && r.mi === mi);
+    if (row) {
+      // Si ya fue pagado, el ingUSD ES el ingreso esperado cobrado
+      if (row.estado === 'pagado') return row.ingUSD;
+      // Si no fue pagado, convertir el monto del row (ajustado) al TC del mes
+      const monto = parseNum(row.monto);
+      const moneda = row.monedaLocal || p.moneda || 'ARS';
+      if (!monto) return null;
+      if (moneda === 'USD') return monto;
+      const tc = _rcGetTC(propId, yr, mi);
+      return tc > 0 ? Math.round(monto / tc) : null;
+    }
+    // Fallback: monto original del contrato
     const moneda = p.moneda || 'ARS';
     const monto  = parseFloat(p.monto) || 0;
     if (!monto) return null;
