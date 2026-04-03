@@ -2136,7 +2136,7 @@ function _forceReseedPaymentsAndGastos() {
   [0,1,2].forEach(m => setPay('grandchelsea', 2026, m, 3900000, 'PYG', TC_PYG[2026][m]));
   savePayYear('grandchelsea', 2026);
 
-  // ── YRIGOYEN: jun–ago 950k | sep–nov 1.002k | dic 1.071k | ene-feb 1.071k | mar 1.167k ──
+  // ── YRIGOYEN: jun–ago 950k | sep–nov 1.002k | dic–feb 1.071k | mar–may 1.167k ──
   [5,6,7].forEach(m  => setPay('irigoyen', 2025, m, 950000,  'ARS', TC_ARS[2025][m]));
   [8,9,10].forEach(m => setPay('irigoyen', 2025, m, 1002000, 'ARS', TC_ARS[2025][m]));
   setPay('irigoyen', 2025, 11, 1071000, 'ARS', TC_ARS[2025][11]);
@@ -2144,6 +2144,8 @@ function _forceReseedPaymentsAndGastos() {
   setPay('irigoyen', 2026, 0, 1071000, 'ARS', TC_ARS[2026][0]);
   setPay('irigoyen', 2026, 1, 1071000, 'ARS', TC_ARS[2026][1]);
   setPay('irigoyen', 2026, 2, 1167000, 'ARS', TC_ARS[2026][2]);
+  setPay('irigoyen', 2026, 3, 1167000, 'ARS', TC_ARS[2026][3]);
+  setPay('irigoyen', 2026, 4, 1167000, 'ARS', TC_ARS[2026][4]);
   savePayYear('irigoyen', 2026);
 
   // ── PH MELO: abr 2025 → mar 2026, USD 400 ──
@@ -2468,6 +2470,8 @@ function initProperties() {
     forcePay('irigoyen', 2026, 0,  1071000, 'ARS', TC_ARS[2026][0]);
     forcePay('irigoyen', 2026, 1,  1071000, 'ARS', TC_ARS[2026][1]);
     forcePay('irigoyen', 2026, 2,  1167000, 'ARS', TC_ARS[2026][2]);
+    forcePay('irigoyen', 2026, 3,  1167000, 'ARS', TC_ARS[2026][3]);
+    forcePay('irigoyen', 2026, 4,  1167000, 'ARS', TC_ARS[2026][4]);
 
     // ── PH MELO: abr 2025 → mar 2026, USD 400 ──
     [3,4,5,6,7,8,9,10,11].forEach(m => forcePay('phmelo', 2025, m, 400, 'USD', null));
@@ -2726,7 +2730,7 @@ function seedInitialPayments() {
   [8,9,10].forEach(m => seedPay('irigoyen', 2025, m, 1002000, 'ARS', TC_ARS[2025][m]));
   [11].forEach(m     => seedPay('irigoyen', 2025, m, 1071000, 'ARS', TC_ARS[2025][m]));
   [0,1].forEach(m    => seedPay('irigoyen', 2026, m, 1071000, 'ARS', TC_ARS[2026][m]));
-  [2].forEach(m      => seedPay('irigoyen', 2026, m, 1167000, 'ARS', TC_ARS[2026][m]));
+  [2,3,4].forEach(m  => seedPay('irigoyen', 2026, m, 1167000, 'ARS', TC_ARS[2026][m]));
 
   // ── PH MELO: abr 2025 → mar 2026, USD 400 (no necesita TC) ──
   [3,4,5,6,7,8,9,10,11].forEach(m => seedPay('phmelo', 2025, m, 400, 'USD'));
@@ -9399,6 +9403,19 @@ function showExpensasModal(propId, mesAnioParam) {
 
   const MESES_NOM = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const [mY, mM] = mesAnio.split('-');
+
+  // ── Obtener el monto vigente del mes desde los pagos registrados ──
+  // Prioridad: 1) valor ya guardado en expensas, 2) monto del mes en payments, 3) p.monto (contrato original)
+  function getMontoVigenteMes() {
+    if (saved.alquiler !== undefined && saved.alquiler !== '') return saved.alquiler;
+    const yr = parseInt(mY);
+    const mi = parseInt(mM) - 1;
+    const pays = getPayments(propId, yr);
+    const rowMes = pays[mi];
+    if (rowMes && rowMes.monto && parseFloat(rowMes.monto) > 0) return parseFloat(rowMes.monto);
+    return parseFloat(p.monto) || 0;
+  }
+  const montoVigente = getMontoVigenteMes();
   const mesLabel = MESES_NOM[parseInt(mM) - 1] + ' ' + mY;
 
   // Build servicios info panel
@@ -9504,7 +9521,7 @@ function showExpensasModal(propId, mesAnioParam) {
                 <div>
                   <label style="font-size:0.75rem;font-weight:600;color:var(--accent);display:block;margin-bottom:4px;">Cuota a cobrar este mes</label>
                   <input type="text" inputmode="decimal" id="exp-alquiler"
-                    value="${saved.alquiler !== undefined ? saved.alquiler : (parseFloat(p.monto)||0)}"
+                    value="${montoVigente}"
                     style="width:100%;padding:10px 12px;border:1.5px solid #c4d4ed;border-radius:8px;font-size:1rem;font-weight:700;font-family:inherit;color:var(--accent);background:#fff;"
                     oninput="calcTotalExpensas()">
                 </div>
@@ -10151,8 +10168,8 @@ function generarExpensasPDF() {
   var moneda   = (document.getElementById('exp-moneda') ? document.getElementById('exp-moneda').value : '') || 'ARS';
   var estado   = window._expensasEstado || 'pendiente';
 
-  var pagoProp      = alquiler;  // El pago al propietario es el alquiler pactado (la boni es del inquilino sobre expensas, no descuenta el alquiler al propietario)
-  var totalExpensas = depto + cochera + extra - boni;  // El total real que paga el inquilino descuenta la bonificación
+  var pagoProp      = alquiler;  // El pago al propietario es el alquiler pactado (la boni es del inquilino sobre expensas)
+  var totalExpensas = depto + cochera + extra - boni;  // El total real descuenta la bonificacion
 
   function safeStr(s) { return (s||'').replace(/[^\x00-\xFF]/g,'').trim(); }
   var sym = moneda==='USD' ? 'USD ' : moneda==='PYG' ? 'PYG ' : '$ ';
@@ -10382,9 +10399,9 @@ function generarExpensasPDF() {
     // Caja derecha: expensas
     var rx = ML+BW+6;
     FR(rx, y, BW, SH, C_LIGHT); FR(rx, y, 4, SH, C_MID); SR(rx, y, BW, SH, C_BORD, 0.2);
-    B(5);   TX('EXPENSAS DEL MES',                              rx+7,    y+5,   C_MID);
+    B(5);   TX('EXPENSAS DEL MES',        rx+7,    y+5,   C_MID);
     N(4);   TX('Depto + Cochera + Extra'+(boni>0?' - Bonif.':''), rx+7, y+9.5, C_TXT3);
-    B(16);  TX(fmtV(totalExpensas),                             rx+BW-4, y+16.5, C_DARK, 'right');
+    B(16);  TX(fmtV(totalExpensas),       rx+BW-4, y+16.5, C_DARK, 'right');
     y += SH + 3;
   }
 
