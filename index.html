@@ -10151,8 +10151,8 @@ function generarExpensasPDF() {
   var moneda   = (document.getElementById('exp-moneda') ? document.getElementById('exp-moneda').value : '') || 'ARS';
   var estado   = window._expensasEstado || 'pendiente';
 
-  var pagoProp      = Math.max(alquiler - boni, 0);
-  var totalExpensas = depto + cochera + extra;
+  var pagoProp      = alquiler;  // El pago al propietario es el alquiler pactado (la boni es del inquilino sobre expensas, no descuenta el alquiler al propietario)
+  var totalExpensas = depto + cochera + extra - boni;  // El total real que paga el inquilino descuenta la bonificación
 
   function safeStr(s) { return (s||'').replace(/[^\x00-\xFF]/g,'').trim(); }
   var sym = moneda==='USD' ? 'USD ' : moneda==='PYG' ? 'PYG ' : '$ ';
@@ -10377,14 +10377,14 @@ function generarExpensasPDF() {
     // Caja izquierda: pago propietario
     FR(ML,  y, BW, SH, C_DARK); FR(ML, y, 4, SH, C_MID);
     B(5);   TX('PAGO AL PROPIETARIO',              ML+7,    y+5,   C_LIGHT);
-    N(4);   TX('Alquiler'+(boni>0?' - Bonif.':''), ML+7,    y+9.5, [140,165,210]);
+    N(4);   TX('Cuota mensual segun contrato',     ML+7,    y+9.5, [140,165,210]);
     B(16);  TX(fmtN(pagoProp),                     ML+BW-4, y+16.5, C_WHITE, 'right');
     // Caja derecha: expensas
     var rx = ML+BW+6;
     FR(rx, y, BW, SH, C_LIGHT); FR(rx, y, 4, SH, C_MID); SR(rx, y, BW, SH, C_BORD, 0.2);
-    B(5);   TX('EXPENSAS DEL MES',        rx+7,    y+5,   C_MID);
-    N(4);   TX('Depto + Cochera + Extra', rx+7,    y+9.5, C_TXT3);
-    B(16);  TX(fmtV(totalExpensas),       rx+BW-4, y+16.5, C_DARK, 'right');
+    B(5);   TX('EXPENSAS DEL MES',                              rx+7,    y+5,   C_MID);
+    N(4);   TX('Depto + Cochera + Extra'+(boni>0?' - Bonif.':''), rx+7, y+9.5, C_TXT3);
+    B(16);  TX(fmtV(totalExpensas),                             rx+BW-4, y+16.5, C_DARK, 'right');
     y += SH + 3;
   }
 
